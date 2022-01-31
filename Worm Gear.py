@@ -1,15 +1,10 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
-from ast import Mod
-from fileinput import filename
-from importlib import resources
-from modulefinder import Module
-from turtle import pos
 import adsk.core, adsk.fusion, adsk.cam, traceback
 import os
 import math
-import threading, random, json
+
 
 # Globals
 _app = adsk.core.Application.get()
@@ -107,9 +102,7 @@ def run(context):
         if tbPanel:
             tbPanel.deleteMe()
         tbPanel = tbPanels.add('NewItem', 'Worm Gear Generator', 'SelectPanel', False)
-     
         cmdDef = _ui.commandDefinitions.itemById('panel')
-        cmdDef.toolClipFilename = 'resources/WormGear/WormGearTooltip.png'
 
         if cmdDef:
             cmdDef.deleteMe()
@@ -178,6 +171,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
         super().__init__()
     def notify(self, args):
         try:
+            des = adsk.fusion.Design.cast(_app.activeProduct)
             eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
 
             cmd = eventArgs.command
@@ -211,40 +205,29 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             radioButtonItems.add("Средний диаметр", True)
             radio_WormSize.tooltip = "Описание для выбора исходного параметра расчета размера червяка"
 
+            peredat = '20.0000'
+            peredatAttrib = des.attributes.itemByName('WormGear', 'peredatNumber')
+            if peredatAttrib:
+                peredat = peredatAttrib.value
+
             Peredat_ =  groupChildInputs_General.addDropDownCommandInput('Model',
                                                                               'Требуемое передаточное отношение',
                                                                adsk.core.DropDownStyles.TextListDropDownStyle)
+            dropdownItems = Peredat_.listItems
+            Items = ['5.6000', '6.3000','7.1000',
+            '8.0000','9.0000','10.0000','11.2000','12.5000',
+            '14.0000','16.0000','18.0000','20.0000','22.4000',
+            '25.0000','28.0000','31.5000','40.0000','45.0000',
+            '50.0000','56.0000','63.0000','71.0000','80.0000','90.0000','100.0000']
+            for i in Items:
+                if(peredat == i):
+                    dropdownItems.add(i, True, '')
+                else:
+                    dropdownItems.add(i, False, '')
+           
             Peredat_.tooltip = "Передаточное отношение"
             Peredat_.tooltipDescription = "Передаточное число червячной передачи равно отношению числа зубьев червячного колеса к числу витков червяка.\n Передаточное число показывает, насколько данная пара зацепления в принципе может изменить крутящий момент в ту или иную сторону, линейное соотношение диаметров зубчатых колёс"
-
-            dropdownItems = Peredat_.listItems
-            dropdownItems.add('5.6000', False, '')
-            dropdownItems.add('6.3000', False, '')
-            dropdownItems.add('7.1000', False, '')
-            dropdownItems.add('8.0000', False, '')
-            dropdownItems.add('9.0000', False, '')
-            dropdownItems.add('10.0000', False, '')
-            dropdownItems.add('11.2000', False, '')
-            dropdownItems.add('12.5000', False, '')
-            dropdownItems.add('14.0000', False, '')
-            dropdownItems.add('16.0000', False, '')
-            dropdownItems.add('18.0000', False, '')
-            dropdownItems.add('20.0000', True, '')
-            dropdownItems.add('22.4000', False, '')
-            dropdownItems.add('25.0000', False, '')
-            dropdownItems.add('28.0000', False, '')
-            dropdownItems.add('31.5000', False, '')
-            dropdownItems.add('40.0000', False, '')
-            dropdownItems.add('45.0000', False, '')
-            dropdownItems.add('50.0000', False, '')
-            dropdownItems.add('56.0000', False, '')
-            dropdownItems.add('63.0000', False, '')
-            dropdownItems.add('71.0000', False, '')
-            dropdownItems.add('80.0000', False, '')
-            dropdownItems.add('90.0000', False, '')
-            dropdownItems.add('100.0000', False, '')
-            dropdownItems
-
+            
             Peredat_Changed =  groupChildInputs_General.addValueInput('Model', 'Требуемое передаточное отношение', '',
                                                 adsk.core.ValueInput.createByReal(0.0))
             Peredat_Changed.tooltip = "Передаточное отношение"
@@ -253,59 +236,52 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             temp_Peredat = (Peredat_.selectedItem.name).split(' ')
             temp_Peredat = float(temp_Peredat[0])
 
+            module = '4.000 mm'
+            moduleAttrib = des.attributes.itemByName('WormGear', 'module')
+            if moduleAttrib:
+                module = moduleAttrib.value
+            
             Module_ = groupChildInputs_General.addDropDownCommandInput('Model', 'Модуль, [мм]',
                                                                               adsk.core.DropDownStyles.TextListDropDownStyle)
             dropdownItems = Module_.listItems
-            dropdownItems.add('1.000 mm', False, '')
-            dropdownItems.add('1.120 mm', False, '')
-            dropdownItems.add('1.250 mm', False, '')
-            dropdownItems.add('1.400 mm', False, '')
-            dropdownItems.add('1.600 mm', False, '')
-            dropdownItems.add('1.800 mm', False, '')
-            dropdownItems.add('2.000 mm', False, '')
-            dropdownItems.add('2.240 mm', False, '')
-            dropdownItems.add('2.500 mm', False, '')
-            dropdownItems.add('2.800 mm', False, '')
-            dropdownItems.add('3.150 mm', False, '')
-            dropdownItems.add('3.550 mm', False, '')
-            dropdownItems.add('4.000 mm', True, '')
-            dropdownItems.add('4.500 mm', False, '')
-            dropdownItems.add('5.000 mm', False, '')
-            dropdownItems.add('5.600 mm', False, '')
-            dropdownItems.add('6.300 mm', False, '')
-            dropdownItems.add('7.100 mm', False, '')
-            dropdownItems.add('8.000 mm', False, '')
-            dropdownItems.add('9.000 mm', False, '')
-            dropdownItems.add('10.000 mm', False, '')
-            dropdownItems.add('11.200 mm', False, '')
-            dropdownItems.add('12.500 mm', False, '')
-            dropdownItems.add('14.000 mm', False, '')
-            dropdownItems.add('16.000 mm', False, '')
-            dropdownItems.add('18.000 mm', False, '')
-            dropdownItems.add('20.000 mm', False, '')
-            dropdownItems.add('22.400 mm', False, '')
-            dropdownItems.add('25.000 mm', False, '')
+            Items = ['1.000 mm', '1.150 mm','1.250 mm',
+            '1.400 mm','1.600 mm','1.800 mm','2.000 mm','2.240 mm',
+            '2.500 mm','2.800 mm','3.150 mm','3.550 mm','4.000 mm',
+            '4.500 mm','5.000 mm','5.600 mm','6.300 mm','7.100 mm',
+            '8.000 mm','9.000 mm','10.000 mm','11.200 mm','12.500 mm','14.000 mm','16.000 mm', '18.000 mm',
+            '20.000 mm', '22.400 mm', '25.000 mm']
+            for i in Items:
+                if(module == i):
+                    dropdownItems.add(i, True, '')
+                else:
+                    dropdownItems.add(i, False, '')
+
             Module_.tooltip = "Модуль"
             Module_.tooltipDescription = "Модуль – число миллиметров диаметра делительной окружности, приходящееся на один зуб. Самый главный параметр, стандартизирован, определяется из прочностного расчёта зубчатых передач. Чем больше нагружена передача, тем выше значение модуля. Через него выражаются все остальные параметры"
-            
-
             temp_Module = (Module_.selectedItem.name).split(' ')
             temp_Module = float(temp_Module[0])
+
+
+            pressureAngle = '20.0000 deg'
+            presAngleAttrib = des.attributes.itemByName('WormGear', 'pressureAngle')
+            if presAngleAttrib:
+                pressureAngle = presAngleAttrib.value
+            Items = ['14.5000 deg','17.5000 deg', '20.0000 deg', '22.5000 deg', '25.0000 deg', '30.0000 deg']
 
             Angle_prof_ = groupChildInputs_General.addDropDownCommandInput('Model',
                                                                               'Угол профиля, [град]',
                                                                               adsk.core.DropDownStyles.TextListDropDownStyle)
             dropdownItems = Angle_prof_.listItems
-            dropdownItems.add('14.5000 deg', False, '')
-            dropdownItems.add('17.5000 deg', False, '')
-            dropdownItems.add('20.0000 deg', True, '')
-            dropdownItems.add('22.5000 deg', False, '')
-            dropdownItems.add('25.0000 deg', False, '')
-            dropdownItems.add('30.0000 deg', False, '')
+            for i in Items:
+                if(pressureAngle == i):
+                    dropdownItems.add(i, True, '')
+                else:
+                    dropdownItems.add(i, False, '')
             Angle_prof_.tooltip = "Угол профиля"
             Angle_prof_.tooltipDescription = "Острый угол между касательной к профилю в данной точке и радиусом - вектором, проведенным в данную точку из центра"
             Angle_prof_.toolClipFilename = 'resources/WormGear/pressureAngle.png'
 
+           
             temp_Angle_prof = (Angle_prof_.selectedItem.name).split(' ')
             temp_Angle_prof = float(temp_Angle_prof[0])
 
@@ -317,20 +293,41 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             groupCmdInput_Worm.isExpanded = False
             groupChildInputs_Worm = groupCmdInput_Worm.children
 
+            buildWorm = 'Построить 3D модель'
+            buildWormAttrib = des.attributes.itemByName('Worm', 'BuildWorm')
+            if buildWormAttrib:
+                buildWorm = buildWormAttrib.value
             selectCreateWorm = groupChildInputs_Worm.addDropDownCommandInput('Model', 'Компонент',
                                                                            adsk.core.DropDownStyles.TextListDropDownStyle)
             dropdownItems = selectCreateWorm.listItems
-            dropdownItems.add('Построить 3D модель', True, '')
-            dropdownItems.add('Без модели', False, '')
+            if(buildWorm == 'Построить 3D модель'):
+                dropdownItems.add('Построить 3D модель', True, '')
+            else:
+                dropdownItems.add('Построить 3D модель', False, '')
+            if(buildWorm == 'Без модели'):
+                dropdownItems.add('Без модели', True, '')
+            else:
+                dropdownItems.add('Без модели', False, '')
+            
             selectCreateWorm.tooltip = "Построение компонента"
 
-            Num_of_vit_worm =  groupChildInputs_Worm.addIntegerSpinnerCommandInput('Model', 'Количество витков', 1, 20, 1, 3)
-                                                
+            Num_of_vit_worm =  groupChildInputs_Worm.addIntegerSpinnerCommandInput('Model', 'Количество витков', 1, 20, 1, 4)
+
+            NumVitkovAttrib = des.attributes.itemByName('Worm', 'NumVitkov')
+            if NumVitkovAttrib:
+                Num_of_vit_worm.value = int(NumVitkovAttrib.value)
+
+
             Num_of_vit_worm.tooltip = "Количество витков червяка"
             Num_of_vit_worm.tooltipDescription = "Параметр задает количество витков червяка. От данного параметра зависит передаточное отношение червячной передачи и угол наклона зубьев"
             Num_of_vit_worm.toolClipFilename = 'resources/Worm/numVitkov.png'
 
             KolOborotov_worm = groupChildInputs_Worm.addIntegerSpinnerCommandInput('Model', 'Количество оборотов витков ', 1, 50, 1, 10)
+
+            KolOborotovAttrib = des.attributes.itemByName('Worm', 'KolOborotov')
+            if KolOborotovAttrib:
+                KolOborotov_worm.value = int(KolOborotovAttrib.value)
+
             KolOborotov_worm.tooltip = "Количесто оборотов витков"
             KolOborotov_worm.tooltipDescription = "Параметр задает количество оборотов витков червяка. От данного параметра зависит длина нарезной части червяка"
             KolOborotov_worm.toolClipFilename = 'resources/Worm/numOborotov.png'
@@ -354,6 +351,11 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             Av_diam_worm = groupChildInputs_Worm.addValueInput('Model', 'Средний диаметр, [мм]', '',
                                                 adsk.core.ValueInput.createByReal(temp_Module * float(Koef_Diam_worm.value)))
+
+            AvDiamAttrib = des.attributes.itemByName('Worm', 'AverageDiam')
+            if AvDiamAttrib:
+                Av_diam_worm.value = float(AvDiamAttrib.value)
+
             Av_diam_worm.tooltip = "Средний диаметр"
             Av_diam_worm.tooltipDescription = "Диаметр средней концентрической окружности червяка"
             Av_diam_worm.toolClipFilename = 'resources/Worm/diamWorm.png'
@@ -366,31 +368,63 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             groupCmdInput_WormGear.isExpanded = False
             groupChildInputs_WormGear = groupCmdInput_WormGear.children
 
+            buildGear = 'Построить 3D модель'
+            selectGearAttrib = des.attributes.itemByName('Gear', 'BuildGear')
+            if selectGearAttrib:
+                buildGear = selectGearAttrib.value
             selectCreateGear = groupChildInputs_WormGear.addDropDownCommandInput('Model', 'Компонент',
                                                                                adsk.core.DropDownStyles.TextListDropDownStyle)
             dropdownItems = selectCreateGear.listItems
-            dropdownItems.add('Построить 3D модель', True, '')
-            dropdownItems.add('Без модели', False, '')
+            if(buildGear == 'Построить 3D модель'):
+                dropdownItems.add('Построить 3D модель', True, '')
+            else:
+                dropdownItems.add('Построить 3D модель', False, '')
+            if(buildGear == 'Без модели'):
+                dropdownItems.add('Без модели', True, '')
+            else:
+                dropdownItems.add('Без модели', False, '')
             selectCreateGear.tooltip = "Построение компонента"
 
             Teeth_Num_Gear = groupChildInputs_WormGear.addIntegerSpinnerCommandInput('Model', 'Количество зубьев', 1, 1000, 1, 60)
+            numTeethAttrib = des.attributes.itemByName('Gear', 'numTeeth')
+            if numTeethAttrib:
+                Teeth_Num_Gear.value = int(numTeethAttrib.value)
+
             Teeth_Num_Gear.tooltip = "Количество зубьев"
             Teeth_Num_Gear.tooltipDescription = "Количество зубьев на червячном колесе. От данного параметра зависит передаточное число"
             Teeth_Num_Gear.toolClipFilename = 'resources/WormGear/teethGear.png'
 
             Width_WG = groupChildInputs_WormGear.addIntegerSpinnerCommandInput('Model', 'Ширина грани, [мм]', 1, 100, 1, 20)
+            thicknessAttrib = des.attributes.itemByName('Gear', 'thickness')
+            if thicknessAttrib:
+                Width_WG.value = int(thicknessAttrib.value)
+
             Width_WG.tooltip = "Ширина грани червячного колеса"
             Width_WG.tooltipDescription = "Параметр задает ширину проектируемого червячного колеса"
             Width_WG.toolClipFilename = 'resources/WormGear/widthWheel.png'
 
             Koef_smesh_Gear = groupChildInputs_WormGear.addValueInput('Model', 'Коэффициент смещения', '',
                                                     adsk.core.ValueInput.createByReal(1.0))
+            koefSmeshAttrib = des.attributes.itemByName('Gear', 'koefSmesh')
+            if koefSmeshAttrib:
+                Koef_smesh_Gear.value = float(koefSmeshAttrib.value)
+
             Koef_smesh_Gear.tooltip = "Коэффициент смещения"
             Koef_smesh_Gear.tooltipDescription = "Коэффициент и определяет геометрию колеса (с подрезанием или нет), положительное значение – перемещение червяка от колеса, отрицательное - перемещение червяка к колесу"
             
+            naprVitkov = 'Левое'
+            naprVitkovAttrib = des.attributes.itemByName('Gear', 'NaprVitkov')
+            if naprVitkovAttrib:
+                naprVitkov = naprVitkovAttrib.value
             buttonRowInput = groupChildInputs_WormGear.addButtonRowCommandInput('buttonRow', 'Направление зубьев', False)
-            buttonRowInput.listItems.add('Левое', True, 'resources/Left')
-            buttonRowInput.listItems.add('Правое', False, 'resources/Right')
+            if(naprVitkov == 'Левое'):
+                buttonRowInput.listItems.add('Левое', True, 'resources/Left')
+            else:
+                buttonRowInput.listItems.add('Левое', False, 'resources/Left')
+            if(naprVitkov == 'Правое'):
+                buttonRowInput.listItems.add('Правое', True, 'resources/Right')
+            else:
+                buttonRowInput.listItems.add('Правое', False, 'resources/Right')
             
 
             groupCmdInput_FirstResults = tab1ChildInputs.addGroupCommandInput('Model', 'Результаты')
@@ -828,6 +862,22 @@ class GearCommandExecuteHandler(adsk.core.CommandEventHandler):
             global ModuleExp, NumVitkovExp, PressureAngleExp, DiamWormExp, LengthWormExp
             eventArgs = adsk.core.CommandEventArgs.cast(args)
 
+            des = adsk.fusion.Design.cast(_app.activeProduct)
+            attribs = des.attributes
+            attribs.add('WormGear', 'peredatNumber', Peredat_.selectedItem.name)
+            attribs.add('WormGear', 'module', Module_.selectedItem.name)
+            attribs.add('WormGear', 'pressureAngle', Angle_prof_.selectedItem.name)
+            attribs.add('Worm', 'BuildWorm', selectCreateWorm.selectedItem.name)
+            attribs.add('Worm', 'NumVitkov', str(Num_of_vit_worm.value))
+            attribs.add('Worm', 'KolOborotov', str(KolOborotov_worm.value))
+            attribs.add('Worm', 'AverageDiam', str(Av_diam_worm.value))
+            attribs.add('Gear', 'BuildGear', selectCreateGear.selectedItem.name)
+            attribs.add('Gear', 'numTeeth', str(Teeth_Num_Gear.value))
+            attribs.add('Gear', 'thickness', str(Width_WG.value))
+            attribs.add('Gear', 'koefSmesh', str(Koef_smesh_Gear.value))
+            attribs.add('Gear', 'NaprVitkov', buttonRowInput.selectedItem.name)
+
+
             if (selectCreateGear.selectedItem.name == 'Построить 3D модель'):
                 des = adsk.fusion.Design.cast(_app.activeProduct)
 
@@ -1229,7 +1279,7 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             d2 = int(Teeth_Num_Gear.value) * float(Module)
             dw1 = d1 + 2 * float(Koef_smesh_Gear.value) * float(Module)
             dw2 = d2
-            da1 = d1 + 2*float(Module)*1
+            da1 = d1 + (2*float(Module)*1)
             db1 = d1 * math.cos(Angle_prof * math.pi/180)
             da2 = d2 + 2 * float(Module)*(1 + float(Koef_smesh_Gear.value))
             db2 = d2 * math.cos(Angle_prof * math.pi/180)
@@ -1301,17 +1351,15 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 Eps_tab.text = ('%.4f' % Epsilon)
                 _Module_tab.text = Module + ' мм'
                 _Alpha_tab.text = ('%.4f' % (math.atan(tan_on_cos) *180/math.pi)) + ' deg'
-                    
-                _Df_tab.text = ('%.4f' %(d1-2*float(Module)*(1+0.3))) + ' мм'
-                _naruz_Diam_tab.text = ('%.4f' %(da1)) + ' мм'
+
+                _naruz_Diam_tab.text = ('%.4f' %(da1)) + ' мм'    
                 _Dsr_tab.text = ('%.4f' %(Av_diam_worm.value)) + ' мм'
-                
+                _Df_tab.text = ('%.4f' %(d1-2*float(Module)*(1+0.3))) + ' мм'
 
                 _Da_WG_tab.text = str(d2+2*float(Module)*(1 + float(Koef_smesh_Gear.value))) + ' мм'
                 _D_WG_tab.text = str(int(Teeth_Num_Gear.value)*float(Module)) + ' мм'
                 _Df_WG_tab.text = str(d2 - 2 * float(Module)*(1 + 0.3 - float(Koef_smesh_Gear.value))) + ' мм' 
                 # _xmin_tab.text = ('%.4f' % (Ha0-((Zv2/2)*(1+(0.2723/1))*(math.sin(Angle_prof * math.pi/180))**2)))
-                # _xmin_tab.text = str((360*int(Width_WG.value)*(float(Module)*float(Num_of_vit_worm.value)/float(Av_diam_worm.value)))/(float(Module)*int(Teeth_Num_Gear.value)*math.pi))
 
                 #Table Count
                 Frad_tab.text = ('%.4f' % (Ft_worm*(math.tan(Angle_prof * math.pi/180)*math.cos(phiz * math.pi/180))/(math.sin((tgy+phiz)*math.pi/180)))) + ' Н'
