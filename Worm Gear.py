@@ -1,10 +1,13 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
+import tkinter as tk
+from tkinter.tix import Tree
 import adsk.core, adsk.fusion, adsk.cam, traceback
 import os
 import math
-
+from tkinter import E, filedialog
+import json
 
 # Globals
 _app = adsk.core.Application.get()
@@ -59,6 +62,9 @@ Frad_tab = adsk.core.TextBoxCommandInput.cast(None)
 Peredat_= adsk.core.DropDownCommandInput.cast(None)
 KPD = adsk.core.ValueCommandInput.cast(None)
 Kw = adsk.core.ValueCommandInput.cast(None)
+Elastic = adsk.core.ValueCommandInput.cast(None)
+Puasson = adsk.core.ValueCommandInput.cast(None)
+Kmat = adsk.core.ValueCommandInput.cast(None)
 y_Luis = adsk.core.ValueCommandInput.cast(None)
 Sn = adsk.core.ValueCommandInput.cast(None)
 Fs_WG_tab = adsk.core.TextBoxCommandInput.cast(None)
@@ -67,9 +73,11 @@ radio_WormSize = adsk.core.RadioButtonGroupCommandInput.cast(None)
 radioButtonS = adsk.core.RadioButtonGroupCommandInput.cast(None)
 Kpd_Check = adsk.core.BoolValueCommandInput.cast(None)
 buttonRowInput = adsk.core.ButtonRowCommandInput.cast(None)
+buttonSaveLoad = adsk.core.ButtonRowCommandInput.cast(None)
 
 _handlers = []
 tbPanel = None
+Peredat = 0
 ModuleExp = 0
 NumVitkovExp = 0
 PressureAngleExp = 0
@@ -178,7 +186,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             cmd.isExecutedWhenPreEmpted = False
             inputs = cmd.commandInputs
             
-            global Kpd_Check,buttonRowInput, selectCreateWorm, selectCreateGear, radio_WormSize, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab, Koef_Diam_, _standard, _pressureAngle, _pressureAngleCustom, _diaPitch, _pitch, _module, _numTeeth, _rootFilletRad, _thickness, _holeDiam, _pitchDiam, _backlash, _imgInputEnglish, _imgInputMetric, _errMessage
+            global Kpd_Check,buttonRowInput, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
            
             # ВКЛАДКА МОДЕЛЬ
             # TAB МОДЕЛЬ
@@ -189,6 +197,12 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             groupCmdInput_General = tab1ChildInputs.addGroupCommandInput(commandId + '_groupGeneral', 'Общее')
             groupCmdInput_General.isExpanded = False
             groupChildInputs_General = groupCmdInput_General.children
+
+            buttonSaveLoad = groupChildInputs_General.addButtonRowCommandInput('buttonSaveLoad', 'Данные', True)
+            buttonSaveLoad.listItems.add('Сохранить введенные параметры в файл', False, 'resources/Menu_Save')
+            buttonSaveLoad.listItems.add('Загрузить параметры из файла', False, 'resources/Menu_Load')
+
+           
             radio_CountType = groupChildInputs_General.addRadioButtonGroupCommandInput('Model',
                                                                                      'Исходный параметр')
             radioButtonItems = radio_CountType.listItems
@@ -659,9 +673,9 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                                                     adsk.core.ValueInput.createByString('0.6'))
             Kw.tooltip = "Контактная усталостная прочность (Kw)"
 
-            E = groupChildInputs_Material.addValueInput('Model', 'Модуль упругости (E)', 'MPa',
+            Elastic = groupChildInputs_Material.addValueInput('Model', 'Модуль упругости (E)', 'MPa',
                                                     adsk.core.ValueInput.createByString('206000.0'))
-            E.tooltip = "Модуль упругости (E)"
+            Elastic.tooltip = "Модуль упругости (E)"
 
             Puasson =  groupChildInputs_Material.addValueInput('Model', 'Коэффициент Пуассона (μ)', '',
                                                     adsk.core.ValueInput.createByReal(0.3))
@@ -1163,7 +1177,6 @@ def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module,
         gearValues['pressureAngle'] = str(pressureAngle)
         attrib = newComp.attributes.add('Wheel', 'Values',str(gearValues))
         newComp.name = 'Wheel'
-        # (' + str(numTeeth) + ' teeth)'
         
         count = occs.count
         subComp1 = occs.item(count-1).component
@@ -1226,8 +1239,41 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             eventArgs = adsk.core.InputChangedEventArgs.cast(args)
             changedInput = eventArgs.input
             
-            global _units
+            global _units, Peredat
             
+
+            if buttonSaveLoad.listItems[0].isSelected == True:
+                root = tk.Tk()
+                root.withdraw()
+                folder_path = filedialog.asksaveasfile(initialfile = 'data.json',
+                                            initialdir= str(os.path.dirname(os.path.realpath(__file__))),
+                                            title="Сохранить данные",
+                                            filetypes=(("JSON files", '*.json'),("all files", "*.*")),
+                                            mode='w')
+                buttonSaveLoad.listItems[0].isSelected = False    
+                if folder_path is None:
+                    return
+
+                params = exportParameters()
+                with open(folder_path.name, 'w') as f:
+                    f.write(json.dumps(params))
+                _ui.messageBox('Данные успешно сохранены!')
+               
+            if buttonSaveLoad.listItems[1].isSelected == True:
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(initialdir= str(os.path.dirname(os.path.realpath(__file__))),
+                                                        title="Открыть файл",
+                                                        filetypes=(("JSON files", '*.json'),("all files", "*.*")))
+                buttonSaveLoad.listItems[1].isSelected = False    
+                if not file_path:
+                    return
+
+                with open(file_path, 'r') as f:
+                    data = json.loads(f.read())
+                importParameters(data) 
+                f.close()
+
              #Values from dropdowns
             Module = (Module_.selectedItem.name).split(' ')
             Module = Module[0]
@@ -1392,6 +1438,86 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         except:
             if _ui:
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+def importParameters(data):
+    try:
+        if data['initial parameter']  == 'Передаточное отношение':
+            radio_CountType.listItems[0].isSelected = True
+            Peredat_.selectedItem.name = data['gear_ratio']
+        elif data['initial parameter']  == 'Количество зубьев':
+            radio_CountType.listItems[1].isSelected = True
+
+        if data['worm_size']  == 'Коэффициент диаметра':
+            radio_WormSize.listItems[0].isSelected = True
+        elif data['worm_size']  == 'Угол наклона зуба':
+            radio_WormSize.listItems[1].isSelected = True
+        elif data['worm_size']  == 'Средний диаметр':
+            radio_WormSize.listItems[2].isSelected = True
+        
+        for element in Module_.listItems:
+            if element.name == data['module']:
+                element.isSelected = True
+
+        for element in Angle_prof_.listItems:
+            if element.name == data['profile_angle']:
+                element.isSelected = True
+                
+        for element in buttonRowInput.listItems:
+            if element.name == data['tooth_direction']:
+                element.isSelected = True
+
+        Angle_teeth_.value = float(data['tooth_angle'])
+        Num_of_vit_worm.value = int(data['number_of_turns'])
+        KolOborotov_worm.value = int(data['number_of_turnsVit'])
+        Koef_Diam_worm.value = float(data['diameter_factor'])
+        Av_diam_worm.value = float(data['average_diameter'])
+        Teeth_Num_Gear.value = int(data['number_of_teeth'])
+        Width_WG.value = int(data['gear_width']) 
+        Koef_smesh_Gear.value = float(data['bias_factor'])
+        Power_.value = float(data['power'])
+        Velocity_.value = float(data['speed'])
+        Moment_.value = float(data['torque'])
+        Sn.value = float(data['tensile_strength'])
+        Kw.value = float(data['contact_strength'])
+        Elastic.value = float(data['elastic_modulus'])
+        Puasson.value = float(data['Poisson_ratio'])
+        Kmat.value = float(data['worm_material_factor'])
+        y_Luis.value = float(data['Lewis_ratio'])
+
+        _ui.messageBox('Данные успешно загружены!')
+
+    except:
+            if _ui:
+                _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+ 
+
+def exportParameters():
+    result = {'initial parameter': str(radio_CountType.selectedItem.name) ,
+            'worm_size': str(radio_WormSize.selectedItem.name),
+            'gear_ratio': Peredat,
+            'module': Module_.selectedItem.name,
+            'profile_angle': Angle_prof_.selectedItem.name,
+            'tooth_angle': Angle_teeth_.value,
+            'number_of_turns': Num_of_vit_worm.value,
+            'number_of_turnsVit': KolOborotov_worm.value, 
+            'diameter_factor': Koef_Diam_worm.value,
+            'average_diameter': Av_diam_worm.value,
+            'number_of_teeth': Teeth_Num_Gear.value,
+            'gear_width': Width_WG.value,
+            'bias_factor': Koef_smesh_Gear.value,
+            'tooth_direction': buttonRowInput.selectedItem.name,
+            'power': Power_.value,
+            'speed': Velocity_.value,
+            'torque': Moment_.value,
+            'tensile_strength': Sn.value,
+            'contact_strength': Kw.value,
+            'elastic_modulus': Elastic.value,
+            'Poisson_ratio': Puasson.value,
+            'worm_material_factor': Kmat.value,
+            'Lewis_ratio': y_Luis.value
+    }
+
+    return result
            
 # Event handler for the validateInputs event.
 class GearCommandValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
