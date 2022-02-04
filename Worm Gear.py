@@ -1443,7 +1443,9 @@ def importParameters(data):
     try:
         if data['initial parameter']  == 'Передаточное отношение':
             radio_CountType.listItems[0].isSelected = True
-            Peredat_.selectedItem.name = data['gear_ratio']
+            for element in Peredat_.listItems:
+                if element.name == data['gear_ratio']:
+                    element.isSelected = True
         elif data['initial parameter']  == 'Количество зубьев':
             radio_CountType.listItems[1].isSelected = True
 
@@ -1492,6 +1494,8 @@ def importParameters(data):
  
 
 def exportParameters():
+    if radio_CountType.listItems[0].isSelected == True:
+        Peredat = Peredat_.selectedItem.name
     result = {'initial parameter': str(radio_CountType.selectedItem.name) ,
             'worm_size': str(radio_WormSize.selectedItem.name),
             'gear_ratio': Peredat,
