@@ -1,17 +1,25 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
-import tkinter as tk
-from tkinter.tix import Tree
-import adsk.core, adsk.fusion, adsk.cam, traceback
+import re
+import sys
 import os
+from modules.fpdf2 import fpdf
+modules = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'modules')
+sys.path.insert(0, modules)
+popped = sys.path.pop(0)
+assert(popped == modules)
+from modules.fpdf2.fpdf import FPDF
+import adsk.core, adsk.fusion, adsk.cam, traceback
 import math
-from tkinter import E, filedialog
+import tkinter as tk
+from tkinter import  filedialog
 import json
 
 # Globals
 _app = adsk.core.Application.get()
 _ui = _app.userInterface
+pdf = FPDF()
 _units = ''
 commandId = 'WormGear'
 commandName = 'Worm Gear Generator'
@@ -74,6 +82,7 @@ radioButtonS = adsk.core.RadioButtonGroupCommandInput.cast(None)
 Kpd_Check = adsk.core.BoolValueCommandInput.cast(None)
 buttonRowInput = adsk.core.ButtonRowCommandInput.cast(None)
 buttonSaveLoad = adsk.core.ButtonRowCommandInput.cast(None)
+buttonimportParams = adsk.core.ButtonRowCommandInput.cast(None)
 
 _handlers = []
 tbPanel = None
@@ -186,7 +195,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             cmd.isExecutedWhenPreEmpted = False
             inputs = cmd.commandInputs
             
-            global Kpd_Check,buttonRowInput, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
+            global Kpd_Check,buttonRowInput,buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
            
             # ВКЛАДКА МОДЕЛЬ
             # TAB МОДЕЛЬ
@@ -595,6 +604,10 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _Df_WG_tab.isReadOnly = True
             _Df_WG_tab.text = str(temp_d2 - 2 * temp_Module *(1 + 0.2 - float(Koef_smesh_Gear.value))) + ' мм'
             table.addCommandInput(_Df_WG_tab, 2, 1, False, False)
+
+            buttonimportParams = groupChildInputs_Results.addButtonRowCommandInput('buttonimportParams', 'Импорт параметров', True)
+            buttonimportParams.listItems.add('Экспорт параметров в PDF', False, 'resources/toPDF')
+            buttonimportParams.listItems.add('Экспорт параметров в Word', False, 'resources/toWord')
             # 4
             # text = tab1ChildInputs.addStringValueInput('text0', 'Xmin',
             #                                            'Мин. рекоменд. коэффициент (Xmin)')
@@ -1270,7 +1283,12 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                     return
 
                 with open(file_path, 'r') as f:
-                    data = json.loads(f.read())
+                    try:
+                        data = json.loads(f.read())
+                    except:
+                        _ui.messageBox('Ошибка чтения файла!')
+                        return
+
                 importParameters(data) 
                 f.close()
 
@@ -1422,6 +1440,10 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 Fw_WG_tab.text = ('%.4f' % (d2*0.001 * float(Width_WG.value)*0.01 * float(Kw.value)*100)) + ' Н'
                 Fs_WG_tab.text = ('%.4f' % ((float(Sn.value)/10)*float(Width_WG.value)*0.01*(math.pi*float(Module))*float(y_Luis.value))) + ' Н'
                 
+            if buttonimportParams.listItems[0].isSelected == True:
+                generatePdfTable()
+                buttonimportParams.listItems[0].isSelected = False
+                _ui.messageBox('Данные успешно сохранены!')
 
                 #Epsilons
                 # pb = math.pi * math.cos(Angle_prof * math.pi/180)
@@ -1438,6 +1460,110 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         except:
             if _ui:
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+
+def generatePdfTable():
+
+    data = generateData(isForTable=True)
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.add_font('DejaVu', '', str(os.path.dirname(os.path.realpath(__file__)))+'/fonts/DejaVuSans.ttf', uni=True)
+    pdf.set_font('DejaVu', '', 13)
+    line_height = pdf.font_size * 2.5
+    col_width = pdf.epw / 2  
+    for row in data:
+        for datum in row:
+            pdf.multi_cell(col_width, line_height, datum, border=1, ln=3, max_line_height=pdf.font_size)
+        pdf.ln(line_height)
+    file_path = filedialog.asksaveasfilename(initialfile = 'WormGearParameters.pdf',
+                                            initialdir= str(os.path.dirname(os.path.realpath(__file__))),
+                                            title="Сохранить файл",
+                                            filetypes=(("PDF", '*.pdf'),("all files", "*.*")))
+    if not file_path:
+        return
+    if '.pdf' in file_path:
+        pdf.output(file_path)
+    else:
+        pdf.output(file_path + '.pdf')
+
+
+def generateData(isForTable):
+    global Peredat
+    if radio_CountType.listItems[0].isSelected == True:
+        Peredat = Peredat_.selectedItem.name
+
+    if isForTable == False:
+        params = {'initial parameter': str(radio_CountType.selectedItem.name) ,
+                'worm_size': str(radio_WormSize.selectedItem.name),
+                'gear_ratio': Peredat,
+                'module': Module_.selectedItem.name,
+                'profile_angle': Angle_prof_.selectedItem.name,
+                'tooth_angle': Angle_teeth_.value,
+                'number_of_turns': Num_of_vit_worm.value,
+                'number_of_turnsVit': KolOborotov_worm.value, 
+                'diameter_factor': Koef_Diam_worm.value,
+                'average_diameter': Av_diam_worm.value,
+                'number_of_teeth': Teeth_Num_Gear.value,
+                'gear_width': Width_WG.value,
+                'bias_factor': Koef_smesh_Gear.value,
+                'tooth_direction': buttonRowInput.selectedItem.name,
+                'power': Power_.value,
+                'speed': Velocity_.value,
+                'torque': Moment_.value,
+                'tensile_strength': Sn.value,
+                'contact_strength': Kw.value,
+                'elastic_modulus': Elastic.value,
+                'Poisson_ratio': Puasson.value,
+                'worm_material_factor': Kmat.value,
+                'Lewis_ratio': y_Luis.value
+        }
+    else:
+        params = (
+                ("Передаточное отношение", str(Peredat)),
+                ('Модуль', str(Module_.selectedItem.name)),
+                ('Угол профиля, мм', str(Angle_prof_.selectedItem.name)),
+                ('Угол наклона зуба, °', str(Angle_teeth_.value)),
+                ('Межосевое расстояние, мм', str(_Aw_tab.text)),
+                ('Коэффициент осевого перекрытия', str(Eps_tab.text)),
+                ('Угол профиля, °',  str(_Alpha_tab.text)),
+                ('Количество витков', str(Num_of_vit_worm.value)),
+                ('Количество оборотов витков', str(KolOborotov_worm.value)),
+                ('Длина нарезной части червяка, мм', str(Length_wormNarez.value)),
+                ('Коэффициент диаметра', str(Koef_Diam_worm.value)),
+                ('Наружный диаметр червяка',  str(_naruz_Diam_tab.text)),
+                ('Средний диаметр червяка', str(_Dsr_tab.text)),
+                ('Диаметр впадин червяка', str(_Df_tab.text)), 
+                ('Количество зубьев колеса', str(Teeth_Num_Gear.value)),
+                ('Ширина червячного колеса, мм', str(Width_WG.value)),
+                ('Коэффициент смещения', str(Koef_smesh_Gear.value)),
+                ('Направление зубьев', str(buttonRowInput.selectedItem.name)),
+                ('Наружный диаметр колеса', str(_Da_WG_tab.text)),
+                ('Средний диаметр колеса',str( _D_WG_tab.text)),
+                ('Диаметр впадин колеса', str(_Df_WG_tab.text)), 
+                ('Мощность, кВт', str(Power_.value)),
+                ('Скорость, об/мин', str(Velocity_.value)),
+                ('Крутящий момент, Нм', str(Moment_.value)),
+                ('КПД', str(KPD.value)),
+                ("Предел устал. прочности изгиба (Sn), МПа", str( Sn.value)),
+                ("Контактная усталостная прочность (Kw), МПа", str(Kw.value)),
+                ("Модуль упругости (E), МПа", str(Elastic.value)),
+                ("Коэффициент Пуассона (μ)", str(Puasson.value)),
+                ("Коэффициент материала червяка (Kmat)", str(Kmat.value)),
+                ("Коэффициент Льюиса (y)", str(y_Luis.value)), 
+                ("Радиальная сила (Fr)", str(Frad_tab.text)),
+                ("Цикл нагружения (Fn)", str(Fn_tab.text)),
+                ("Скорость скольжения (vk)", str(Vk_tab.text)),
+                ("Окружная сила червяка (Ft)", str(Ft_worm_tab.text)),
+                ("Осевая сила червяка (Fa)", str(Fa_worm_tab.text)),
+                ("Окружная сила колеса (Ft)", str(Fa_WG_tab.text)),
+                ("Осевая сила колеса (Fa)", str(Ft_WG_tab.text)),
+                ("Динамическая нагрузка (Fd)", str(Fd_WG_tab.text)),
+                ("Поверхн. устал. пред. нагрузки (Fw)", str(Fw_WG_tab.text)),
+                ("Усталость изгиба пред. нагрузки (Fs)", str(Fs_WG_tab.text)),
+                )
+    return params
+
 
 def importParameters(data):
     try:
@@ -1494,33 +1620,7 @@ def importParameters(data):
  
 
 def exportParameters():
-    if radio_CountType.listItems[0].isSelected == True:
-        Peredat = Peredat_.selectedItem.name
-    result = {'initial parameter': str(radio_CountType.selectedItem.name) ,
-            'worm_size': str(radio_WormSize.selectedItem.name),
-            'gear_ratio': Peredat,
-            'module': Module_.selectedItem.name,
-            'profile_angle': Angle_prof_.selectedItem.name,
-            'tooth_angle': Angle_teeth_.value,
-            'number_of_turns': Num_of_vit_worm.value,
-            'number_of_turnsVit': KolOborotov_worm.value, 
-            'diameter_factor': Koef_Diam_worm.value,
-            'average_diameter': Av_diam_worm.value,
-            'number_of_teeth': Teeth_Num_Gear.value,
-            'gear_width': Width_WG.value,
-            'bias_factor': Koef_smesh_Gear.value,
-            'tooth_direction': buttonRowInput.selectedItem.name,
-            'power': Power_.value,
-            'speed': Velocity_.value,
-            'torque': Moment_.value,
-            'tensile_strength': Sn.value,
-            'contact_strength': Kw.value,
-            'elastic_modulus': Elastic.value,
-            'Poisson_ratio': Puasson.value,
-            'worm_material_factor': Kmat.value,
-            'Lewis_ratio': y_Luis.value
-    }
-
+    result = generateData(isForTable = False)
     return result
            
 # Event handler for the validateInputs event.
