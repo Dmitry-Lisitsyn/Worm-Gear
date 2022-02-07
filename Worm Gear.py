@@ -1,25 +1,36 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
-import re
 import sys
 import os
-from modules.fpdf2 import fpdf
-modules = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'modules')
-sys.path.insert(0, modules)
-popped = sys.path.pop(0)
-assert(popped == modules)
-from modules.fpdf2.fpdf import FPDF
+import inspect
 import adsk.core, adsk.fusion, adsk.cam, traceback
 import math
 import tkinter as tk
 from tkinter import  filedialog
 import json
-
-# Globals
 _app = adsk.core.Application.get()
 _ui = _app.userInterface
-pdf = FPDF()
+
+script_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
+script_name = os.path.splitext(os.path.basename(script_path))[0]
+script_dir = os.path.dirname(script_path)
+
+sys.path.append(script_dir + "\modules")
+try:
+    import docx
+    from modules.fpdf2.fpdf import FPDF
+except:
+    _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+# modules = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'modules')
+# sys.path.insert(0, modules)
+# popped = sys.path.pop(0)
+# assert(popped == modules)
+# subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'python-docx'])
+
+
+# Globals
 _units = ''
 commandId = 'WormGear'
 commandName = 'Worm Gear Generator'
@@ -69,6 +80,7 @@ Fn_tab = adsk.core.TextBoxCommandInput.cast(None)
 Frad_tab = adsk.core.TextBoxCommandInput.cast(None)
 Peredat_= adsk.core.DropDownCommandInput.cast(None)
 KPD = adsk.core.ValueCommandInput.cast(None)
+hole_diameter = adsk.core.ValueCommandInput.cast(None)
 Kw = adsk.core.ValueCommandInput.cast(None)
 Elastic = adsk.core.ValueCommandInput.cast(None)
 Puasson = adsk.core.ValueCommandInput.cast(None)
@@ -80,6 +92,7 @@ radio_CountType = adsk.core.RadioButtonGroupCommandInput.cast(None)
 radio_WormSize = adsk.core.RadioButtonGroupCommandInput.cast(None)
 radioButtonS = adsk.core.RadioButtonGroupCommandInput.cast(None)
 Kpd_Check = adsk.core.BoolValueCommandInput.cast(None)
+hole_Check = adsk.core.BoolValueCommandInput.cast(None)
 buttonRowInput = adsk.core.ButtonRowCommandInput.cast(None)
 buttonSaveLoad = adsk.core.ButtonRowCommandInput.cast(None)
 buttonimportParams = adsk.core.ButtonRowCommandInput.cast(None)
@@ -96,6 +109,7 @@ LengthWormExp = 0
 def run(context):
     try:
         global _app, _ui, commandId, commandName, commandDescription
+
         workSpace = _ui.workspaces.itemById('FusionSolidEnvironment')
         tbPanels = workSpace.toolbarPanels
         # faceSel = _ui.selectEntity('Select a face.', 'Faces')
@@ -195,7 +209,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             cmd.isExecutedWhenPreEmpted = False
             inputs = cmd.commandInputs
             
-            global Kpd_Check,buttonRowInput,buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
+            global Kpd_Check,buttonRowInput, hole_diameter, hole_Check, buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
            
             # ВКЛАДКА МОДЕЛЬ
             # TAB МОДЕЛЬ
@@ -449,6 +463,9 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             else:
                 buttonRowInput.listItems.add('Правое', False, 'resources/Right')
             
+            hole_Check = groupChildInputs_WormGear.addBoolValueInput('Model', 'Добавить отверстие, [мм]', True, '', False)
+            hole_diameter = groupChildInputs_WormGear.addValueInput('Model', '', '',
+                                                adsk.core.ValueInput.createByReal(0))
 
             groupCmdInput_FirstResults = tab1ChildInputs.addGroupCommandInput('Model', 'Результаты')
             groupCmdInput_FirstResults.isExpanded = False
@@ -605,7 +622,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _Df_WG_tab.text = str(temp_d2 - 2 * temp_Module *(1 + 0.2 - float(Koef_smesh_Gear.value))) + ' мм'
             table.addCommandInput(_Df_WG_tab, 2, 1, False, False)
 
-            buttonimportParams = groupChildInputs_Results.addButtonRowCommandInput('buttonimportParams', 'Импорт параметров', True)
+            buttonimportParams = groupChildInputs_Results.addButtonRowCommandInput('buttonimportParams', 'Экспорт параметров', True)
             buttonimportParams.listItems.add('Экспорт параметров в PDF', False, 'resources/toPDF')
             buttonimportParams.listItems.add('Экспорт параметров в Word', False, 'resources/toWord')
             # 4
@@ -915,8 +932,8 @@ class GearCommandExecuteHandler(adsk.core.CommandEventHandler):
                 Teeth_NumGear = float(Teeth_Num_Gear.value)
                 widthGear = Width_WG.value
                 helixangle = float(Angle_teeth_.value)
-                    
-                gearComp = drawGear(des, diaPitch, Teeth_NumGear, widthGear, profile_angle, Module_creation, helixangle)
+                holeDiam = float(hole_diameter.value)
+                gearComp = drawGear(des, diaPitch, Teeth_NumGear, widthGear, profile_angle, Module_creation, helixangle, holeDiam)
             
             if (selectCreateWorm.selectedItem.name == 'Построить 3D модель'):
                 ModuleExp = str((_Module_tab.text).split(' ')[0]) + ' mm'
@@ -963,13 +980,14 @@ class WormHandler(adsk.core.CustomEventHandler):
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
         
 
-def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module, helixAngle):
+def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module, helixAngle, hole_diam):
     try:
         # The diametral pitch is specified in inches but everthing
         # here expects all distances to be in centimeters, so convert
         # for the gear creation.
         diametralPitch = diametralPitch /2.54
         thickness = thickness * 0.1
+        hole_diam = hole_diam * 0.1
 
         pitchDia = numTeeth / diametralPitch
 
@@ -1224,6 +1242,23 @@ def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module,
         moveInput = bodyComp.features.moveFeatures.createInput(ents, trans)
         bodyComp.features.moveFeatures.add(moveInput)
 
+        
+        if hole_diam > 0:
+            holeSketch = sketches.add(xyPlane)
+            profile = adsk.fusion.Profile.cast(None)
+            holeSketch.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(-positionX, positionY, thickness/2), hole_diam/2.0)
+            profile = holeSketch.profiles.item(0)
+            
+            #### Extrude the circle to create the base of the gear.
+            extrudes = newComp.features.extrudeFeatures
+            extInput = extrudes.createInput(profile, adsk.fusion.FeatureOperations.CutFeatureOperation)
+
+            distance = adsk.core.ValueInput.createByReal(-thickness)
+            extInput.setDistanceExtent(False, distance)
+
+            # Create the extrusion.
+            baseExtrude = extrudes.add(extInput)
+
         return newComp
     except Exception as error:
         _ui.messageBox("draw Wheel Failed : " + str(error)) 
@@ -1336,6 +1371,12 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 Peredat_.isVisible = False
                 Peredat = Peredat_Changed.value
 
+            if(hole_Check.value == False):
+                hole_diameter.isVisible = False
+                hole_diameter.value = 0
+            else:
+                hole_diameter.isVisible = True
+
             #Values of diameters    
             pitchDia = int(Teeth_Num_Gear.value) / ( (25.4 / float(Module)) / 2.54)
             twistAngle = (float(Width_WG.value) / (math.tan(math.radians(90) + float(Angle_teeth_.value) * math.pi/180) * (pitchDia/2)))
@@ -1443,7 +1484,11 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             if buttonimportParams.listItems[0].isSelected == True:
                 generatePdfTable()
                 buttonimportParams.listItems[0].isSelected = False
-                _ui.messageBox('Данные успешно сохранены!')
+               
+            if buttonimportParams.listItems[1].isSelected == True:
+                generateWordTable()
+                buttonimportParams.listItems[1].isSelected = False
+                
 
                 #Epsilons
                 # pb = math.pi * math.cos(Angle_prof * math.pi/180)
@@ -1460,6 +1505,42 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         except:
             if _ui:
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+
+def generateWordTable():
+
+    doc = docx.Document()
+    
+    # Table data in a form of list
+    data = generateData(isForTable=True)
+    
+    # Creating a table object
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'
+
+    row = table.rows[0].cells
+    row[0].text = 'Параметр'
+    row[1].text = 'Значение'
+    # Adding data from the list to the table
+    for id, name in data:
+        # Adding a row and then adding data in it.
+        row = table.add_row().cells
+        # Converting id to string as table can only take string input
+        row[0].text = str(id)
+        row[1].text = name
+
+    file_path = filedialog.asksaveasfilename(initialfile = 'WormGearParameters.docx',
+                                            initialdir= str(os.path.dirname(os.path.realpath(__file__))),
+                                            title="Сохранить файл",
+                                            filetypes=(("Документ Word", '*.docx'),("all files", "*.*")))
+    if not file_path:
+        return
+    if '.docx' in file_path:
+        doc.save(file_path)
+    else:
+        doc.save(file_path + '.docx')
+    
+    _ui.messageBox('Файл создан!')
 
 
 def generatePdfTable():
@@ -1486,6 +1567,8 @@ def generatePdfTable():
         pdf.output(file_path)
     else:
         pdf.output(file_path + '.pdf')
+    
+    _ui.messageBox('Файл создан!')
 
 
 def generateData(isForTable):
@@ -1508,6 +1591,7 @@ def generateData(isForTable):
                 'gear_width': Width_WG.value,
                 'bias_factor': Koef_smesh_Gear.value,
                 'tooth_direction': buttonRowInput.selectedItem.name,
+                'hole_diameter': hole_diameter.value,
                 'power': Power_.value,
                 'speed': Velocity_.value,
                 'torque': Moment_.value,
@@ -1538,6 +1622,7 @@ def generateData(isForTable):
                 ('Ширина червячного колеса, мм', str(Width_WG.value)),
                 ('Коэффициент смещения', str(Koef_smesh_Gear.value)),
                 ('Направление зубьев', str(buttonRowInput.selectedItem.name)),
+                ('Диаметр отверстия, мм', str(hole_diameter.value)),
                 ('Наружный диаметр колеса', str(_Da_WG_tab.text)),
                 ('Средний диаметр колеса',str( _D_WG_tab.text)),
                 ('Диаметр впадин колеса', str(_Df_WG_tab.text)), 
@@ -1545,9 +1630,9 @@ def generateData(isForTable):
                 ('Скорость, об/мин', str(Velocity_.value)),
                 ('Крутящий момент, Нм', str(Moment_.value)),
                 ('КПД', str(KPD.value)),
-                ("Предел устал. прочности изгиба (Sn), МПа", str( Sn.value)),
-                ("Контактная усталостная прочность (Kw), МПа", str(Kw.value)),
-                ("Модуль упругости (E), МПа", str(Elastic.value)),
+                ("Предел устал. прочности изгиба (Sn), Па", str( Sn.value)),
+                ("Контактная усталостная прочность (Kw), Па", str(Kw.value)),
+                ("Модуль упругости (E), Па", str(Elastic.value)),
                 ("Коэффициент Пуассона (μ)", str(Puasson.value)),
                 ("Коэффициент материала червяка (Kmat)", str(Kmat.value)),
                 ("Коэффициент Льюиса (y)", str(y_Luis.value)), 
