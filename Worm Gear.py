@@ -19,7 +19,7 @@ script_dir = os.path.dirname(script_path)
 sys.path.append(script_dir + "\modules")
 try:
     import docx
-    from modules.fpdf2.fpdf import FPDF
+    from fpdf import FPDF
 except:
     _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
@@ -466,6 +466,12 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             hole_Check = groupChildInputs_WormGear.addBoolValueInput('Model', 'Добавить отверстие, [мм]', True, '', False)
             hole_diameter = groupChildInputs_WormGear.addValueInput('Model', '', '',
                                                 adsk.core.ValueInput.createByReal(0))
+            
+            holeDiamAttrib = des.attributes.itemByName('Gear', 'holediam')
+            if holeDiamAttrib:
+                hole_Check.value = True
+                hole_diameter.value = float(holeDiamAttrib.value)
+               
 
             groupCmdInput_FirstResults = tab1ChildInputs.addGroupCommandInput('Model', 'Результаты')
             groupCmdInput_FirstResults.isExpanded = False
@@ -920,6 +926,7 @@ class GearCommandExecuteHandler(adsk.core.CommandEventHandler):
             attribs.add('Gear', 'thickness', str(Width_WG.value))
             attribs.add('Gear', 'koefSmesh', str(Koef_smesh_Gear.value))
             attribs.add('Gear', 'NaprVitkov', buttonRowInput.selectedItem.name)
+            attribs.add('Gear', 'holediam', str(hole_diameter.value))
 
 
             if (selectCreateGear.selectedItem.name == 'Построить 3D модель'):
@@ -1622,7 +1629,7 @@ def generateData(isForTable):
                 ('Ширина червячного колеса, мм', str(Width_WG.value)),
                 ('Коэффициент смещения', str(Koef_smesh_Gear.value)),
                 ('Направление зубьев', str(buttonRowInput.selectedItem.name)),
-                ('Диаметр отверстия, мм', str(hole_diameter.value)),
+                ('Диаметр отверстия колеса, мм', str(hole_diameter.value)),
                 ('Наружный диаметр колеса', str(_Da_WG_tab.text)),
                 ('Средний диаметр колеса',str( _D_WG_tab.text)),
                 ('Диаметр впадин колеса', str(_Df_WG_tab.text)), 
@@ -1678,7 +1685,11 @@ def importParameters(data):
         for element in buttonRowInput.listItems:
             if element.name == data['tooth_direction']:
                 element.isSelected = True
-
+        
+        if data['hole_diameter'] != 0:
+            hole_Check.value = True
+            hole_diameter.value = float(data['hole_diameter'])
+        
         Angle_teeth_.value = float(data['tooth_angle'])
         Num_of_vit_worm.value = int(data['number_of_turns'])
         KolOborotov_worm.value = int(data['number_of_turnsVit'])
