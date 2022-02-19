@@ -1,9 +1,5 @@
 {
 	"python.autoComplete.extraPaths":	["C:/Users/Dimch/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs"],
-	"python.analysis.extraPaths":	[
-		"C:/Users/Dimch/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs",
-		"./modules/python-docx",
-		"./modules/fpdf2"
-	],
-	"python.pythonPath":	"C:/Users/Dimch/AppData/Local/Autodesk/webdeploy/production/a92224e805924f40fe2f5cb1ea196540cf83211e/Python/python.exe"
+	"python.analysis.extraPaths":	["C:/Users/Dimch/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs", "C:/Users/Dimch/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/AddIns/Worm Gear/modules"],
+	"python.pythonPath":	"C:/Users/Dimch/AppData/Local/Autodesk/webdeploy/production/50d1a2b00ac928c7781cbca6551e586a5384d498/Python/python.exe"
 }

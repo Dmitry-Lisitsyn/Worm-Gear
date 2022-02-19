@@ -1,7 +1,7 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
-import sys
+import sys, subprocess
 import os
 import inspect
 import adsk.core, adsk.fusion, adsk.cam, traceback
@@ -16,19 +16,17 @@ script_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
 script_name = os.path.splitext(os.path.basename(script_path))[0]
 script_dir = os.path.dirname(script_path)
 
-sys.path.append(script_dir + "\modules")
+sys.path.append(script_dir + '\modules')
+
 try:
-    import docx
-    from fpdf import FPDF
+    from .modules.docx import docx   
+    from .modules.fpdf2.fpdf import FPDF
 except:
     _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
-# modules = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'modules')
-# sys.path.insert(0, modules)
-# popped = sys.path.pop(0)
-# assert(popped == modules)
-# subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'python-docx'])
-
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'fpdf2'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'python-docx'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'Pillow'])
+del sys.path[-1]
 
 # Globals
 _units = ''
@@ -1535,7 +1533,8 @@ def generateWordTable():
         # Converting id to string as table can only take string input
         row[0].text = str(id)
         row[1].text = name
-
+    root = tk.Tk()
+    root.withdraw()
     file_path = filedialog.asksaveasfilename(initialfile = 'WormGearParameters.docx',
                                             initialdir= str(os.path.dirname(os.path.realpath(__file__))),
                                             title="Сохранить файл",
@@ -1564,6 +1563,8 @@ def generatePdfTable():
         for datum in row:
             pdf.multi_cell(col_width, line_height, datum, border=1, ln=3, max_line_height=pdf.font_size)
         pdf.ln(line_height)
+    root = tk.Tk()
+    root.withdraw()
     file_path = filedialog.asksaveasfilename(initialfile = 'WormGearParameters.pdf',
                                             initialdir= str(os.path.dirname(os.path.realpath(__file__))),
                                             title="Сохранить файл",
