@@ -1,6 +1,7 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
+from html import entities
 import sys, subprocess
 import os
 import inspect
@@ -96,6 +97,7 @@ buttonSaveLoad = adsk.core.ButtonRowCommandInput.cast(None)
 buttonimportParams = adsk.core.ButtonRowCommandInput.cast(None)
 
 _handlers = []
+materialsMap = {}
 tbPanel = None
 Peredat = 0
 ModuleExp = 0
@@ -103,6 +105,7 @@ NumVitkovExp = 0
 PressureAngleExp = 0
 DiamWormExp = 0
 LengthWormExp = 0
+materialWorm = None 
 
 def run(context):
     try:
@@ -694,11 +697,52 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                                                 adsk.core.ValueInput.createByReal(kpd_Val*0.96))
             Kpd_Check.value = True
 
+
+            groupCmdInput_MaterialWorm = tab2ChildInputs.addGroupCommandInput(commandId + '_groupMaterial',
+                                                                          'Материал Червяка')
+            groupCmdInput_MaterialWorm.isExpanded = False
+            groupChildInputs_MaterialWorm = groupCmdInput_MaterialWorm.children
+
+            materialLibInputWorm = groupChildInputs_MaterialWorm.addDropDownCommandInput(commandId + '_materialLibWorm', 'Библиотека материалов', adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+            listItemsWorm = materialLibInputWorm.listItems
+            materialLibNamesWorm = getMaterialLibNames()
+            for materialName in materialLibNamesWorm :
+                listItemsWorm.add(materialName, False, '')
+            listItemsWorm[0].isSelected = True
+            materialListInputWorm = groupChildInputs_MaterialWorm.addDropDownCommandInput(commandId + '_materialListWorm', 'Материал', adsk.core.DropDownStyles.TextListDropDownStyle)
+            materialsWorm = getMaterialsFromLib(materialLibNamesWorm[0], '')
+            listItemsWorm = materialListInputWorm.listItems
+            for materialName in materialsWorm :
+                listItemsWorm.add(materialName, False, '')
+            listItemsWorm[0].isSelected = True
+            filter_materialWorm = groupChildInputs_MaterialWorm.addStringValueInput(commandId + '_filterWorm', 'Фильтр', '')
+
+
+            groupCmdInput_MaterialWheel = tab2ChildInputs.addGroupCommandInput(commandId + '_groupMaterial',
+                                                                          'Материал Колеса')
+            groupCmdInput_MaterialWheel.isExpanded = False
+            groupChildInputs_MaterialWheel = groupCmdInput_MaterialWheel.children
+
+            materialLibInputWheel = groupChildInputs_MaterialWheel.addDropDownCommandInput(commandId + '_materialLibWheel', 'Библиотека материалов', adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+            listItemsWheel = materialLibInputWheel.listItems
+            materialLibNamesWheel = getMaterialLibNames()
+            for materialName in materialLibNamesWheel :
+                listItemsWheel.add(materialName, False, '')
+            listItemsWheel[0].isSelected = True
+            materialListInputWheel = groupChildInputs_MaterialWheel.addDropDownCommandInput(commandId + '_materialListWheel', 'Материал', adsk.core.DropDownStyles.TextListDropDownStyle)
+            materialsWheel = getMaterialsFromLib(materialLibNamesWheel[0], '')
+            listItemsWheel = materialListInputWheel.listItems
+            for materialName in materialsWheel :
+                listItemsWheel.add(materialName, False, '')
+            listItemsWheel[0].isSelected = True
+            filter_materialGear = groupChildInputs_MaterialWheel.addStringValueInput(commandId + '_filterWheel', 'Фильтр', '')
+
+
             groupCmdInput_Material = tab2ChildInputs.addGroupCommandInput(commandId + '_groupMaterial',
                                                                           'Характеристики материалов')
             groupCmdInput_Material.isExpanded = False
             groupChildInputs_Material = groupCmdInput_Material.children
-            
+
             Sn = groupChildInputs_Material.addValueInput('Model', 'Предел устал. прочности изгиба (Sn)', 'MPa',
                                                     adsk.core.ValueInput.createByString('165.0'))
             Sn.tooltip = "Предел устал. прочности изгиба (Sn)"
@@ -907,8 +951,10 @@ class GearCommandExecuteHandler(adsk.core.CommandEventHandler):
         super().__init__()
     def notify(self, args):
         try:
-            global ModuleExp, NumVitkovExp, PressureAngleExp, DiamWormExp, LengthWormExp
+            global ModuleExp, NumVitkovExp, PressureAngleExp, DiamWormExp, LengthWormExp, materialWorm
             eventArgs = adsk.core.CommandEventArgs.cast(args)
+            command = args.firingEvent.sender
+            inputs = command.commandInputs
 
             des = adsk.fusion.Design.cast(_app.activeProduct)
             attribs = des.attributes
@@ -938,7 +984,13 @@ class GearCommandExecuteHandler(adsk.core.CommandEventHandler):
                 widthGear = Width_WG.value
                 helixangle = float(Angle_teeth_.value)
                 holeDiam = float(hole_diameter.value)
-                gearComp = drawGear(des, diaPitch, Teeth_NumGear, widthGear, profile_angle, Module_creation, helixangle, holeDiam)
+
+                for input in inputs:
+                    if input.id == commandId + '_materialListWheel':
+                        materialListInputWheel = input
+                materialWheel = getMaterial(materialListInputWheel.selectedItem.name)
+
+                gearComp = drawGear(des, diaPitch, Teeth_NumGear, widthGear, profile_angle, Module_creation, helixangle, holeDiam, materialWheel)
             
             if (selectCreateWorm.selectedItem.name == 'Построить 3D модель'):
                 ModuleExp = str((_Module_tab.text).split(' ')[0]) + ' mm'
@@ -946,8 +998,16 @@ class GearCommandExecuteHandler(adsk.core.CommandEventHandler):
                 PressureAngleExp = str(Angle_prof_.selectedItem.name)
                 DiamWormExp = str(('%.4f' %(Av_diam_worm.value)) + ' mm')
                 LengthWormExp = str(int(KolOborotov_worm.value))
+                
+                for input in inputs:
+                    if input.id == commandId + '_materialListWorm':
+                        materialListInputWorm = input
+                materialWorm = getMaterial(materialListInputWorm.selectedItem.name)
+                
                 _app.fireCustomEvent('TestTrucCustomEvent')
             
+
+
         except:
             if _ui:
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
@@ -961,6 +1021,8 @@ class WormHandler(adsk.core.CustomEventHandler):
             importManager = _app.importManager
             rootComp = _app.activeProduct.rootComponent
 
+
+
             filename = str(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'resources\Models\Worm.f3d'))
 
             importOptions = importManager.createFusionArchiveImportOptions(filename)
@@ -969,6 +1031,7 @@ class WormHandler(adsk.core.CustomEventHandler):
 
             pulleyOccurance = rootComp.occurrences.item(rootComp.occurrences.count-1)
 
+            pulleyOccurance.component.material = materialWorm
             parametersWorm = pulleyOccurance.component.parentDesign.allParameters
             ModuleExpression = parametersWorm.itemByName('Module')
             NumVitkov = parametersWorm.itemByName('NumberOfStarts')
@@ -980,12 +1043,14 @@ class WormHandler(adsk.core.CustomEventHandler):
             PressureAngle.expression = PressureAngleExp
             DiamWorm.expression = DiamWormExp
             LengthWorm.expression = LengthWormExp
+
+            
         except:
             if _ui:
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
         
 
-def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module, helixAngle, hole_diam):
+def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module, helixAngle, hole_diam, materialWheel):
     try:
         # The diametral pitch is specified in inches but everthing
         # here expects all distances to be in centimeters, so convert
@@ -1247,6 +1312,7 @@ def drawGear(design, diametralPitch, numTeeth, thickness, pressureAngle, module,
         moveInput = bodyComp.features.moveFeatures.createInput(ents, trans)
         bodyComp.features.moveFeatures.add(moveInput)
 
+        applyMaterialToEntities(materialWheel, ents)
         
         if hole_diam > 0:
             holeSketch = sketches.add(xyPlane)
@@ -1292,8 +1358,39 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             eventArgs = adsk.core.InputChangedEventArgs.cast(args)
             changedInput = eventArgs.input
             
-            global _units, Peredat
+            global _units, Peredat, commandId
             
+            cmd = args.firingEvent.sender
+            inputs = cmd.commandInputs
+            materialListInput = None
+            filterInput = None
+            materialLibInput = None
+            for inputI in inputs:
+                if inputI.id == commandId + '_materialListWorm':
+                    materialListInput = inputI
+                elif inputI.id == commandId + '_filterWorm':
+                    filterInput = inputI
+                elif inputI.id == commandId + '_materialLibWorm':
+                    materialLibInput = inputI
+            cmdInput = args.input
+            if cmdInput.id == commandId + '_materialLibWorm' or cmdInput.id == commandId + '_filterWorm':
+                materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
+                replaceItems(materialListInput, materials)
+            
+            for inputI in inputs:
+                if inputI.id == commandId + '_materialListWheel':
+                    materialListInput = inputI
+                elif inputI.id == commandId + '_filterWheel':
+                    filterInput = inputI
+                elif inputI.id == commandId + '_materialLibWheel':
+                    materialLibInput = inputI
+            cmdInput = args.input
+            if cmdInput.id == commandId + '_materialLibWheel' or cmdInput.id == commandId + '_filterWheel':
+                materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
+                replaceItems(materialListInput, materials)
+
+
+
 
             if buttonSaveLoad.listItems[0].isSelected == True:
                 root = tk.Tk()
@@ -1719,7 +1816,62 @@ def importParameters(data):
 def exportParameters():
     result = generateData(isForTable = False)
     return result
-           
+
+def getMaterialLibNames():
+    materialLibs = _app.materialLibraries
+    libNames = []
+    for materialLib in materialLibs:
+        if materialLib.materials.count > 0:
+            libNames.append(materialLib.name)
+    return libNames
+
+def getMaterialsFromLib(libName, filterExp):
+    global materialsMap
+    materialList = None
+    if libName in materialsMap:
+        materialList = materialsMap[libName]
+    else:
+        materialLib = _app.materialLibraries.itemByName(libName)
+        materials = materialLib.materials
+        materialNames = []
+        for material in materials:
+            materialNames.append(material.name)
+        materialsMap[libName] = materialNames
+        materialList = materialNames
+
+    if filterExp and len(filterExp) > 0:
+        filteredList = []
+        for materialName in materialList:
+            if materialName.lower().find(filterExp.lower()) >= 0:
+                filteredList.append(materialName)
+        return filteredList
+    else:
+        return materialList
+
+def replaceItems(cmdInput, newItems):
+    cmdInput.listItems.clear()
+    if len(newItems) > 0:
+        for item in newItems:
+            cmdInput.listItems.add(item, False, '')
+        cmdInput.listItems[0].isSelected = True
+
+def getMaterial(materialName):
+    materialLibs = _app.materialLibraries
+    material = None
+    for materialLib in materialLibs:
+        materials = materialLib.materials
+        try:
+            material = materials.itemByName(materialName)
+        except:
+            pass
+        if material:
+            break
+    return material
+
+def applyMaterialToEntities(material, entities):
+    for entity in entities:
+        entity.material = material
+
 # Event handler for the validateInputs event.
 class GearCommandValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
     def __init__(self):
