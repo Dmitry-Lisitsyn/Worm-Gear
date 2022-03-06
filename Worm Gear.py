@@ -95,6 +95,9 @@ hole_Check = adsk.core.BoolValueCommandInput.cast(None)
 buttonRowInput = adsk.core.ButtonRowCommandInput.cast(None)
 buttonSaveLoad = adsk.core.ButtonRowCommandInput.cast(None)
 buttonimportParams = adsk.core.ButtonRowCommandInput.cast(None)
+_errMessageGeneral = adsk.core.TextBoxCommandInput.cast(None)
+_errMessageWorm = adsk.core.TextBoxCommandInput.cast(None)
+_errMessageGear = adsk.core.TextBoxCommandInput.cast(None)
 
 _handlers = []
 materialsMap = {}
@@ -177,24 +180,24 @@ def stop(context):
 #                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
-def getCommandInputValue(commandInput, unitType):
-    try:
-        valCommandInput = adsk.core.ValueCommandInput.cast(commandInput)
-        if not valCommandInput:
-            return (False, 0)
+# def getCommandInputValue(commandInput, unitType):
+#     try:
+#         valCommandInput = adsk.core.ValueCommandInput.cast(commandInput)
+#         if not valCommandInput:
+#             return (False, 0)
 
-        # Verify that the expression is valid.
-        des = adsk.fusion.Design.cast(_app.activeProduct)
-        unitsMgr = des.unitsManager
+#         # Verify that the expression is valid.
+#         des = adsk.fusion.Design.cast(_app.activeProduct)
+#         unitsMgr = des.unitsManager
         
-        if unitsMgr.isValidExpression(valCommandInput.expression, unitType):
-            value = unitsMgr.evaluateExpression(valCommandInput.expression, unitType)
-            return (True, value)
-        else:
-            return (False, 0)
-    except:
-        if _ui:
-            _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+#         if unitsMgr.isValidExpression(valCommandInput.expression, unitType):
+#             value = unitsMgr.evaluateExpression(valCommandInput.expression, unitType)
+#             return (True, value)
+#         else:
+#             return (False, 0)
+#     except:
+#         if _ui:
+#             _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
 # Event handler for the commandCreated event.
@@ -210,7 +213,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             cmd.isExecutedWhenPreEmpted = False
             inputs = cmd.commandInputs
             
-            global Kpd_Check,buttonRowInput, hole_diameter, hole_Check, buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
+            global Kpd_Check,buttonRowInput, _errMessageGear, _errMessageGeneral, _errMessageWorm, hole_diameter, hole_Check, buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
            
             # ВКЛАДКА МОДЕЛЬ
             # TAB МОДЕЛЬ
@@ -326,6 +329,10 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             Angle_teeth_ = groupChildInputs_General.addValueInput('Model', 'Угол наклона зуба, [град]', '',
                                                    adsk.core.ValueInput.createByReal(0.0))
             Angle_teeth_.tooltip = "Угол наклона зуба"
+
+            _errMessageGeneral = groupChildInputs_General.addTextBoxCommandInput('errMessageGeneral', '', '', 2, True)
+            _errMessageGeneral.isFullWidth = True
+
             # Червяк
             groupCmdInput_Worm = tab1ChildInputs.addGroupCommandInput('Model', 'Червяк')
             groupCmdInput_Worm.isExpanded = False
@@ -366,7 +373,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             if KolOborotovAttrib:
                 KolOborotov_worm.value = int(KolOborotovAttrib.value)
 
-            KolOborotov_worm.tooltip = "Количесто оборотов витков"
+            KolOborotov_worm.tooltip = "Количество оборотов витков"
             KolOborotov_worm.tooltipDescription = "Параметр задает количество оборотов витков червяка. От данного параметра зависит длина нарезной части червяка"
             KolOborotov_worm.toolClipFilename = 'resources/Worm/numOborotov.png'
 
@@ -399,6 +406,10 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             Av_diam_worm.toolClipFilename = 'resources/Worm/diamWorm.png'
 
             Angle_teeth_.value = math.atan(float(Num_of_vit_worm.value)/(float(Koef_Diam_worm.value)))*180/math.pi   
+
+            _errMessageWorm = groupChildInputs_Worm.addTextBoxCommandInput('errMessageWorm', '', '', 2, True)
+            _errMessageWorm.isFullWidth = True
+
 
             # Червячная передача
             groupCmdInput_WormGear = tab1ChildInputs.addGroupCommandInput('Model',
@@ -472,7 +483,9 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             if holeDiamAttrib:
                 hole_Check.value = True
                 hole_diameter.value = float(holeDiamAttrib.value)
-               
+            
+            _errMessageGear = groupChildInputs_WormGear.addTextBoxCommandInput('errMessageGear', '', '', 2, True)
+            _errMessageGear.isFullWidth = True
 
             groupCmdInput_FirstResults = tab1ChildInputs.addGroupCommandInput('Model', 'Результаты')
             groupCmdInput_FirstResults.isExpanded = False
@@ -586,7 +599,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Results_WormGear
             
             groupChildInputs_Results.addTextBoxCommandInput(commandId + '_textBox', '',
-                                                            'Червячная передача', 1, True)
+                                                            'Червячное колесо', 1, True)
             table = adsk.core.TableCommandInput.cast(
                 groupChildInputs_Results.addTableCommandInput('table2', 'Inputs', 2, '1:1'))
             table.minimumVisibleRows = 3
@@ -632,6 +645,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             buttonimportParams = groupChildInputs_Results.addButtonRowCommandInput('buttonimportParams', 'Экспорт параметров', True)
             buttonimportParams.listItems.add('Экспорт параметров в PDF', False, 'resources/toPDF')
             buttonimportParams.listItems.add('Экспорт параметров в Word', False, 'resources/toWord')
+           
             # 4
             # text = tab1ChildInputs.addStringValueInput('text0', 'Xmin',
             #                                            'Мин. рекоменд. коэффициент (Xmin)')
@@ -849,7 +863,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             # Results_WormGear
             groupChildInputs_Results.addTextBoxCommandInput(commandId + '_textBox', '',
-                                                            'Червячная передача', 1, True)
+                                                            'Червячное колесо', 1, True)
             table = adsk.core.TableCommandInput.cast(
                 groupChildInputs_Results.addTableCommandInput('table2', 'Inputs', 2, '1:1'))
             table.minimumVisibleRows = 3
@@ -932,7 +946,11 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             
             onInputChanged = GearCommandInputChangedHandler()
             cmd.inputChanged.add(onInputChanged)
-            _handlers.append(onInputChanged)     
+            _handlers.append(onInputChanged)
+
+            onValidateInputs = GearCommandValidateInputsHandler()
+            cmd.validateInputs.add(onValidateInputs)
+            _handlers.append(onValidateInputs)     
 
             _app.unregisterCustomEvent('TestTrucCustomEvent')
             customEvent = _app.registerCustomEvent('TestTrucCustomEvent')
@@ -1365,233 +1383,235 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             materialListInput = None
             filterInput = None
             materialLibInput = None
-            for inputI in inputs:
-                if inputI.id == commandId + '_materialListWorm':
-                    materialListInput = inputI
-                elif inputI.id == commandId + '_filterWorm':
-                    filterInput = inputI
-                elif inputI.id == commandId + '_materialLibWorm':
-                    materialLibInput = inputI
-            cmdInput = args.input
-            if cmdInput.id == commandId + '_materialLibWorm' or cmdInput.id == commandId + '_filterWorm':
-                materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
-                replaceItems(materialListInput, materials)
-            
-            for inputI in inputs:
-                if inputI.id == commandId + '_materialListWheel':
-                    materialListInput = inputI
-                elif inputI.id == commandId + '_filterWheel':
-                    filterInput = inputI
-                elif inputI.id == commandId + '_materialLibWheel':
-                    materialLibInput = inputI
-            cmdInput = args.input
-            if cmdInput.id == commandId + '_materialLibWheel' or cmdInput.id == commandId + '_filterWheel':
-                materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
-                replaceItems(materialListInput, materials)
+
+            try:
+                for inputI in inputs:
+                    if inputI.id == commandId + '_materialListWorm':
+                        materialListInput = inputI
+                    elif inputI.id == commandId + '_filterWorm':
+                        filterInput = inputI
+                    elif inputI.id == commandId + '_materialLibWorm':
+                        materialLibInput = inputI
+                cmdInput = args.input
+                if cmdInput.id == commandId + '_materialLibWorm' or cmdInput.id == commandId + '_filterWorm':
+                    materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
+                    replaceItems(materialListInput, materials)
+                
+                for inputI in inputs:
+                    if inputI.id == commandId + '_materialListWheel':
+                        materialListInput = inputI
+                    elif inputI.id == commandId + '_filterWheel':
+                        filterInput = inputI
+                    elif inputI.id == commandId + '_materialLibWheel':
+                        materialLibInput = inputI
+                cmdInput = args.input
+                if cmdInput.id == commandId + '_materialLibWheel' or cmdInput.id == commandId + '_filterWheel':
+                    materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
+                    replaceItems(materialListInput, materials)
 
 
 
 
-            if buttonSaveLoad.listItems[0].isSelected == True:
-                root = tk.Tk()
-                root.withdraw()
-                folder_path = filedialog.asksaveasfile(initialfile = 'data.json',
-                                            initialdir= str(os.path.dirname(os.path.realpath(__file__))),
-                                            title="Сохранить данные",
-                                            filetypes=(("JSON files", '*.json'),("all files", "*.*")),
-                                            mode='w')
-                buttonSaveLoad.listItems[0].isSelected = False    
-                if folder_path is None:
-                    return
-
-                params = exportParameters()
-                with open(folder_path.name, 'w') as f:
-                    f.write(json.dumps(params))
-                _ui.messageBox('Данные успешно сохранены!')
-               
-            if buttonSaveLoad.listItems[1].isSelected == True:
-                root = tk.Tk()
-                root.withdraw()
-                file_path = filedialog.askopenfilename(initialdir= str(os.path.dirname(os.path.realpath(__file__))),
-                                                        title="Открыть файл",
-                                                        filetypes=(("JSON files", '*.json'),("all files", "*.*")))
-                buttonSaveLoad.listItems[1].isSelected = False    
-                if not file_path:
-                    return
-
-                with open(file_path, 'r') as f:
-                    try:
-                        data = json.loads(f.read())
-                    except:
-                        _ui.messageBox('Ошибка чтения файла!')
+                if buttonSaveLoad.listItems[0].isSelected == True:
+                    root = tk.Tk()
+                    root.withdraw()
+                    folder_path = filedialog.asksaveasfile(initialfile = 'data.json',
+                                                initialdir= str(os.path.dirname(os.path.realpath(__file__))),
+                                                title="Сохранить данные",
+                                                filetypes=(("JSON files", '*.json'),("all files", "*.*")),
+                                                mode='w')
+                    buttonSaveLoad.listItems[0].isSelected = False    
+                    if folder_path is None:
                         return
 
-                importParameters(data) 
-                f.close()
-
-             #Values from dropdowns
-            Module = (Module_.selectedItem.name).split(' ')
-            Module = Module[0]
-            Angle_prof = (Angle_prof_.selectedItem.name).split(' ')
-            Angle_prof = float(Angle_prof[0])
-            Peredat = (Peredat_.selectedItem.name).split(' ')
-            Peredat = float(Peredat[0])
-            Length_wormNarez.isEnabled = False
-            Length_wormNarez.value = int(KolOborotov_worm.value)*float(Module)*3.14
-
-            if radio_WormSize.listItems[0].isSelected == True:
-                Koef_Diam_worm.isEnabled = True
-                Angle_teeth_.isEnabled = False
-                Av_diam_worm.isEnabled = False
-                Av_diam_worm.value = Koef_Diam_worm.value * float(Module)
-                Angle_teeth_.value = math.atan(float(Num_of_vit_worm.value)/(float(Koef_Diam_worm.value)))*180/math.pi
-            elif radio_WormSize.listItems[1].isSelected:
-                Koef_Diam_worm.isEnabled = False
-                Angle_teeth_.isEnabled = True
-                Av_diam_worm.isEnabled = False
-                Koef_Diam_worm.value = (float(Num_of_vit_worm.value))/(math.tan((Angle_teeth_.value*math.pi)/180))
-                Av_diam_worm.value = float(Module) * float(Koef_Diam_worm.value)
-            elif radio_WormSize.listItems[2].isSelected:
-                Koef_Diam_worm.isEnabled = False
-                Angle_teeth_.isEnabled = False
-                Av_diam_worm.isEnabled = True
-                Koef_Diam_worm.value = float(Av_diam_worm.value)/float(Module)
-                Angle_teeth_.value = math.atan(float(Num_of_vit_worm.value)/(float(Koef_Diam_worm.value)))*180/math.pi
-
-            if radio_CountType.listItems[0].isSelected == True:
-                Teeth_Num_Gear.isEnabled = False
-                Teeth_Num_Gear.value = int(Peredat * float(Num_of_vit_worm.value))  
-                Peredat_.isEnabled = True
-                Peredat_.isVisible = True
-                Peredat_Changed.isVisible = False
-            elif radio_CountType.listItems[1].isSelected == True :
-                Teeth_Num_Gear.isEnabled = True
-                Peredat_.isEnabled = False
-                Peredat_Changed.value =  float(Teeth_Num_Gear.value / Num_of_vit_worm.value)
-                Peredat_Changed.isEnabled = False
-                Peredat_Changed.isVisible = True
-                Peredat_.isVisible = False
-                Peredat = Peredat_Changed.value
-
-            if(hole_Check.value == False):
-                hole_diameter.isVisible = False
-                hole_diameter.value = 0
-            else:
-                hole_diameter.isVisible = True
-
-            #Values of diameters    
-            pitchDia = int(Teeth_Num_Gear.value) / ( (25.4 / float(Module)) / 2.54)
-            twistAngle = (float(Width_WG.value) / (math.tan(math.radians(90) + float(Angle_teeth_.value) * math.pi/180) * (pitchDia/2)))
-            d1 = float(Koef_Diam_worm.value) * float(Module)
-            d2 = int(Teeth_Num_Gear.value) * float(Module)
-            dw1 = d1 + 2 * float(Koef_smesh_Gear.value) * float(Module)
-            dw2 = d2
-            da1 = d1 + (2*float(Module)*1)
-            db1 = d1 * math.cos(Angle_prof * math.pi/180)
-            da2 = d2 + 2 * float(Module)*(1 + float(Koef_smesh_Gear.value))
-            db2 = d2 * math.cos(Angle_prof * math.pi/180)
-            #Epsilon
-            Epsilon = (float(Width_WG.value)*math.sin(float(Angle_teeth_.value)))/(math.pi*float(Module))
-
-            #Value of angle prof
-            tan_on_cos = math.tan(Angle_prof * math.pi/180) * math.cos(float(Angle_teeth_.value*math.pi/180))
-
-            #Min koef
-            Ha0 = 1 + 0.3 - 0.3*(1- math.sin(Angle_prof * math.pi/180)) 
-            Zv2 = float(Teeth_Num_Gear.value)/(math.cos(Angle_teeth_.value)**3)
-
-            if(Kpd_Check.value == False):
-                KPD.isVisible = False
-            else:
-                KPD.isVisible = True
-
-            v1 = (math.pi*d1*float(Velocity_.value))/(60000)
-            tgy = math.atan(float(Num_of_vit_worm.value)/float(Koef_Diam_worm.value))*180/math.pi
-            v2 = v1*(float(Num_of_vit_worm.value)/float(Koef_Diam_worm.value)) 
-            vk = v1/math.cos(tgy*math.pi/180)
-            phiz = math.atan(0.02+(0.03)/(vk))*180/math.pi
-            Kv = (1200+v2)/(1200)
-
-            #Radio inputs
-            #Peredacha
-            Moment_.value = (60000*float(Power_.value))/(2*math.pi*float(Velocity_.value))
-            Moment_WG.value = (60000*float(Power_WG.value))/(2*math.pi*float(Velocity_WG.value))
-            Ft_WG = (2000*float(Moment_WG.value))/(dw2)
-            Ft_worm = (2000*float(Moment_.value))/(dw1)
-            radioButtonS.isVisible = False 
-            if(radioButtonS.listItems[0].isSelected ==  True):
-                Power_.isVisible = False
-                Velocity_.isVisible = False
-                Moment_.isVisible = False
-                Power_WG.isVisible = True
-                Velocity_WG.isVisible = True
-                Moment_WG.isVisible = True
-               
-                Velocity_.value = float(Velocity_WG.value)*Peredat
-
-                KPD.value = ((math.tan((tgy-phiz)*math.pi/180))/(math.tan(tgy*math.pi/180)))*0.96
-                Power_.value = float(Power_WG.value) * float(KPD.value)
+                    params = exportParameters()
+                    with open(folder_path.name, 'w') as f:
+                        f.write(json.dumps(params))
+                    _ui.messageBox('Данные успешно сохранены!')
                 
-                Moment_.value = (float(Moment_WG.value)/(Peredat))*float(KPD.value)
-                Ft_worm = (2000*float(Moment_.value))/(dw1)
+                if buttonSaveLoad.listItems[1].isSelected == True:
+                    root = tk.Tk()
+                    root.withdraw()
+                    file_path = filedialog.askopenfilename(initialdir= str(os.path.dirname(os.path.realpath(__file__))),
+                                                            title="Открыть файл",
+                                                            filetypes=(("JSON files", '*.json'),("all files", "*.*")))
+                    buttonSaveLoad.listItems[1].isSelected = False    
+                    if not file_path:
+                        return
 
-            #Chervyak
-            else:
-                Power_.isVisible = True
-                Velocity_.isVisible = True
-                Moment_.isVisible = True
-                Power_WG.isVisible = False
-                Velocity_WG.isVisible = False
-                Moment_WG.isVisible = False
-                
-                Velocity_WG.value = float(Velocity_.value)/Peredat
+                    with open(file_path, 'r') as f:
+                        try:
+                            data = json.loads(f.read())
+                        except:
+                            _ui.messageBox('Ошибка чтения файла!')
+                            return
 
-                KPD.value = ((math.tan(tgy*math.pi/180))/(math.tan((tgy+phiz)*math.pi/180)))*0.96
-                Power_WG.value = float(Power_.value) * float(KPD.value)
-                
-                Moment_WG.value = float(KPD.value)*float(Moment_.value)*Peredat
+                    importParameters(data) 
+                    f.close()
+
+                #Values from dropdowns
+                Module = (Module_.selectedItem.name).split(' ')
+                Module = Module[0]
+                Angle_prof = (Angle_prof_.selectedItem.name).split(' ')
+                Angle_prof = float(Angle_prof[0])
+                Peredat = (Peredat_.selectedItem.name).split(' ')
+                Peredat = float(Peredat[0])
+                Length_wormNarez.isEnabled = False
+                Length_wormNarez.value = int(KolOborotov_worm.value)*float(Module)*3.14
+
+                if radio_WormSize.listItems[0].isSelected == True:
+                    Koef_Diam_worm.isEnabled = True
+                    Angle_teeth_.isEnabled = False
+                    Av_diam_worm.isEnabled = False
+                    Av_diam_worm.value = Koef_Diam_worm.value * float(Module)
+                    Angle_teeth_.value = math.atan(float(Num_of_vit_worm.value)/(float(Koef_Diam_worm.value)))*180/math.pi
+                elif radio_WormSize.listItems[1].isSelected:
+                    Koef_Diam_worm.isEnabled = False
+                    Angle_teeth_.isEnabled = True
+                    Av_diam_worm.isEnabled = False
+                    Koef_Diam_worm.value = (float(Num_of_vit_worm.value))/(math.tan((Angle_teeth_.value*math.pi)/180))
+                    Av_diam_worm.value = float(Module) * float(Koef_Diam_worm.value)
+                elif radio_WormSize.listItems[2].isSelected:
+                    Koef_Diam_worm.isEnabled = False
+                    Angle_teeth_.isEnabled = False
+                    Av_diam_worm.isEnabled = True
+                    Koef_Diam_worm.value = float(Av_diam_worm.value)/float(Module)
+                    Angle_teeth_.value = math.atan(float(Num_of_vit_worm.value)/(float(Koef_Diam_worm.value)))*180/math.pi
+
+                if radio_CountType.listItems[0].isSelected == True:
+                    Teeth_Num_Gear.isEnabled = False
+                    Teeth_Num_Gear.value = int(Peredat * float(Num_of_vit_worm.value))  
+                    Peredat_.isEnabled = True
+                    Peredat_.isVisible = True
+                    Peredat_Changed.isVisible = False
+                elif radio_CountType.listItems[1].isSelected == True :
+                    Teeth_Num_Gear.isEnabled = True
+                    Peredat_.isEnabled = False
+                    Peredat_Changed.value =  float(Teeth_Num_Gear.value / Num_of_vit_worm.value)
+                    Peredat_Changed.isEnabled = False
+                    Peredat_Changed.isVisible = True
+                    Peredat_.isVisible = False
+                    Peredat = Peredat_Changed.value
+
+                if(hole_Check.value == False):
+                    hole_diameter.isVisible = False
+                    hole_diameter.value = 0
+                else:
+                    hole_diameter.isVisible = True
+
+                #Values of diameters    
+                pitchDia = int(Teeth_Num_Gear.value) / ( (25.4 / float(Module)) / 2.54)
+                twistAngle = (float(Width_WG.value) / (math.tan(math.radians(90) + float(Angle_teeth_.value) * math.pi/180) * (pitchDia/2)))
+                d1 = float(Koef_Diam_worm.value) * float(Module)
+                d2 = int(Teeth_Num_Gear.value) * float(Module)
+                dw1 = d1 + 2 * float(Koef_smesh_Gear.value) * float(Module)
+                dw2 = d2
+                da1 = d1 + (2*float(Module)*1)
+                db1 = d1 * math.cos(Angle_prof * math.pi/180)
+                da2 = d2 + 2 * float(Module)*(1 + float(Koef_smesh_Gear.value))
+                db2 = d2 * math.cos(Angle_prof * math.pi/180)
+                #Epsilon
+                Epsilon = (float(Width_WG.value)*math.sin(float(Angle_teeth_.value)))/(math.pi*float(Module))
+
+                #Value of angle prof
+                tan_on_cos = math.tan(Angle_prof * math.pi/180) * math.cos(float(Angle_teeth_.value*math.pi/180))
+
+                #Min koef
+                Ha0 = 1 + 0.3 - 0.3*(1- math.sin(Angle_prof * math.pi/180)) 
+                Zv2 = float(Teeth_Num_Gear.value)/(math.cos(Angle_teeth_.value)**3)
+
+                if(Kpd_Check.value == False):
+                    KPD.isVisible = False
+                else:
+                    KPD.isVisible = True
+
+                v1 = (math.pi*d1*float(Velocity_.value))/(60000)
+                tgy = math.atan(float(Num_of_vit_worm.value)/float(Koef_Diam_worm.value))*180/math.pi
+                v2 = v1*(float(Num_of_vit_worm.value)/float(Koef_Diam_worm.value)) 
+                vk = v1/math.cos(tgy*math.pi/180)
+                phiz = math.atan(0.02+(0.03)/(vk))*180/math.pi
+                Kv = (1200+v2)/(1200)
+
+                #Radio inputs
+                #Peredacha
+                Moment_.value = (60000*float(Power_.value))/(2*math.pi*float(Velocity_.value))
+                Moment_WG.value = (60000*float(Power_WG.value))/(2*math.pi*float(Velocity_WG.value))
                 Ft_WG = (2000*float(Moment_WG.value))/(dw2)
+                Ft_worm = (2000*float(Moment_.value))/(dw1)
+                radioButtonS.isVisible = False 
+                if(radioButtonS.listItems[0].isSelected ==  True):
+                    Power_.isVisible = False
+                    Velocity_.isVisible = False
+                    Moment_.isVisible = False
+                    Power_WG.isVisible = True
+                    Velocity_WG.isVisible = True
+                    Moment_WG.isVisible = True
                 
-            if changedInput.id == 'Model':
-                #Table Model 
-                _Aw_tab.text = ('%.4f' %((dw1+dw2)/2)) + ' мм'
-                Eps_tab.text = ('%.4f' % Epsilon)
-                _Module_tab.text = Module + ' мм'
-                _Alpha_tab.text = ('%.4f' % (math.atan(tan_on_cos) *180/math.pi)) + ' deg'
+                    Velocity_.value = float(Velocity_WG.value)*Peredat
 
-                _naruz_Diam_tab.text = ('%.4f' %(da1)) + ' мм'    
-                _Dsr_tab.text = ('%.4f' %(Av_diam_worm.value)) + ' мм'
-                _Df_tab.text = ('%.4f' %(d1-2*float(Module)*(1+0.3))) + ' мм'
+                    KPD.value = ((math.tan((tgy-phiz)*math.pi/180))/(math.tan(tgy*math.pi/180)))*0.96
+                    Power_.value = float(Power_WG.value) * float(KPD.value)
+                    
+                    Moment_.value = (float(Moment_WG.value)/(Peredat))*float(KPD.value)
+                    Ft_worm = (2000*float(Moment_.value))/(dw1)
 
-                _Da_WG_tab.text = str(d2+2*float(Module)*(1 + float(Koef_smesh_Gear.value))) + ' мм'
-                _D_WG_tab.text = str(int(Teeth_Num_Gear.value)*float(Module)) + ' мм'
-                _Df_WG_tab.text = str(d2 - 2 * float(Module)*(1 + 0.3 - float(Koef_smesh_Gear.value))) + ' мм' 
-                # _xmin_tab.text = ('%.4f' % (Ha0-((Zv2/2)*(1+(0.2723/1))*(math.sin(Angle_prof * math.pi/180))**2)))
+                #Chervyak
+                else:
+                    Power_.isVisible = True
+                    Velocity_.isVisible = True
+                    Moment_.isVisible = True
+                    Power_WG.isVisible = False
+                    Velocity_WG.isVisible = False
+                    Moment_WG.isVisible = False
+                    
+                    Velocity_WG.value = float(Velocity_.value)/Peredat
 
-                #Table Count
-                Frad_tab.text = ('%.4f' % (Ft_worm*(math.tan(Angle_prof * math.pi/180)*math.cos(phiz * math.pi/180))/(math.sin((tgy+phiz)*math.pi/180)))) + ' Н'
-                Fn_tab.text = ('%.4f' % ((Ft_WG)/(math.cos(Angle_prof * math.pi/180)*math.cos(float(Angle_teeth_.value))))) + ' Н'
-                Vk_tab.text = ('%.4f' % (vk)) + ' м/c'
+                    KPD.value = ((math.tan(tgy*math.pi/180))/(math.tan((tgy+phiz)*math.pi/180)))*0.96
+                    Power_WG.value = float(Power_.value) * float(KPD.value)
+                    
+                    Moment_WG.value = float(KPD.value)*float(Moment_.value)*Peredat
+                    Ft_WG = (2000*float(Moment_WG.value))/(dw2)
+                    
+                if changedInput.id == 'Model':
+                    #Table Model 
+                    _Aw_tab.text = ('%.4f' %((dw1+dw2)/2)) + ' мм'
+                    Eps_tab.text = ('%.4f' % Epsilon)
+                    _Module_tab.text = Module + ' мм'
+                    _Alpha_tab.text = ('%.4f' % (math.atan(tan_on_cos) *180/math.pi)) + ' deg'
+
+                    _naruz_Diam_tab.text = ('%.4f' %(da1)) + ' мм'    
+                    _Dsr_tab.text = ('%.4f' %(Av_diam_worm.value)) + ' мм'
+                    _Df_tab.text = ('%.4f' %(d1-2*float(Module)*(1+0.3))) + ' мм'
+
+                    _Da_WG_tab.text = str(d2+2*float(Module)*(1 + float(Koef_smesh_Gear.value))) + ' мм'
+                    _D_WG_tab.text = str(int(Teeth_Num_Gear.value)*float(Module)) + ' мм'
+                    _Df_WG_tab.text = str(d2 - 2 * float(Module)*(1 + 0.3 - float(Koef_smesh_Gear.value))) + ' мм' 
+                    # _xmin_tab.text = ('%.4f' % (Ha0-((Zv2/2)*(1+(0.2723/1))*(math.sin(Angle_prof * math.pi/180))**2)))
+
+                    #Table Count
+                    Frad_tab.text = ('%.4f' % (Ft_worm*(math.tan(Angle_prof * math.pi/180)*math.cos(phiz * math.pi/180))/(math.sin((tgy+phiz)*math.pi/180)))) + ' Н'
+                    Fn_tab.text = ('%.4f' % ((Ft_WG)/(math.cos(Angle_prof * math.pi/180)*math.cos(float(Angle_teeth_.value))))) + ' Н'
+                    Vk_tab.text = ('%.4f' % (vk)) + ' м/c'
+                    
+                    Ft_worm_tab.text = ('%.4f' % (Ft_worm)) + ' Н'
+                    Fa_worm_tab.text =('%.4f' % (Ft_WG)) + ' Н'
+                    Fa_WG_tab.text = Ft_worm_tab.text
+                    Ft_WG_tab.text  = Fa_worm_tab.text
                 
-                Ft_worm_tab.text = ('%.4f' % (Ft_worm)) + ' Н'
-                Fa_worm_tab.text =('%.4f' % (Ft_WG)) + ' Н'
-                Fa_WG_tab.text = Ft_worm_tab.text
-                Ft_WG_tab.text  = Fa_worm_tab.text
-            
-                Ft_WG_val = float((str(Fa_worm_tab.text).split(' '))[0])
-                Fd_WG_tab.text = ('%.4f' % (Ft_WG_val*Kv)) + ' Н'
-                Fw_WG_tab.text = ('%.4f' % (d2*0.001 * float(Width_WG.value)*0.01 * float(Kw.value)*100)) + ' Н'
-                Fs_WG_tab.text = ('%.4f' % ((float(Sn.value)/10)*float(Width_WG.value)*0.01*(math.pi*float(Module))*float(y_Luis.value))) + ' Н'
+                    Ft_WG_val = float((str(Fa_worm_tab.text).split(' '))[0])
+                    Fd_WG_tab.text = ('%.4f' % (Ft_WG_val*Kv)) + ' Н'
+                    Fw_WG_tab.text = ('%.4f' % (d2*0.001 * float(Width_WG.value)*0.01 * float(Kw.value)*100)) + ' Н'
+                    Fs_WG_tab.text = ('%.4f' % ((float(Sn.value)/10)*float(Width_WG.value)*0.01*(math.pi*float(Module))*float(y_Luis.value))) + ' Н'
+                    
+                if buttonimportParams.listItems[0].isSelected == True:
+                    generatePdfTable()
+                    buttonimportParams.listItems[0].isSelected = False
                 
-            if buttonimportParams.listItems[0].isSelected == True:
-                generatePdfTable()
-                buttonimportParams.listItems[0].isSelected = False
-               
-            if buttonimportParams.listItems[1].isSelected == True:
-                generateWordTable()
-                buttonimportParams.listItems[1].isSelected = False
-                
-
+                if buttonimportParams.listItems[1].isSelected == True:
+                    generateWordTable()
+                    buttonimportParams.listItems[1].isSelected = False
+            except:
+                pass
                 #Epsilons
                 # pb = math.pi * math.cos(Angle_prof * math.pi/180)
                 # pn = math.pi*(float(Module)/math.cos( float(Angle_teeth_.value)))
@@ -1675,6 +1695,10 @@ def generatePdfTable():
     
     _ui.messageBox('Файл создан!')
 
+
+def exportParameters():
+    result = generateData(isForTable = False)
+    return result
 
 def generateData(isForTable):
     global Peredat
@@ -1813,10 +1837,6 @@ def importParameters(data):
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
  
 
-def exportParameters():
-    result = generateData(isForTable = False)
-    return result
-
 def getMaterialLibNames():
     materialLibs = _app.materialLibraries
     libNames = []
@@ -1879,6 +1899,60 @@ class GearCommandValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
     def notify(self, args):
         try:
             eventArgs = adsk.core.ValidateInputsEventArgs.cast(args)
+            errMessageGeneral = ''
+            errMessageWorm = ''
+            errMessageGear = ''
+
+            if float(Angle_teeth_.value) <= 0:
+                errMessageGeneral = 'Угол наклона зуба должен быть больше нуля!'
+                eventArgs.areInputsValid = False
+
+            if int(Num_of_vit_worm.value) <= 0 :
+                errMessageWorm = 'Количество витков должно быть больше нуля!'
+                eventArgs.areInputsValid = False
+            
+            if int(KolOborotov_worm.value) <= 0 :
+                errMessageWorm = 'Количество оборотов витков должно быть больше нуля!'
+                eventArgs.areInputsValid = False
+
+            if float(Koef_Diam_worm.value) <= 0 :
+                errMessageWorm = 'Коэффициент диаметра червяка должен быть больше нуля!'
+                eventArgs.areInputsValid = False
+
+            if float(Av_diam_worm.value) <= 0 :
+                errMessageWorm = 'Средний диаметр червяка должен быть больше нуля!'
+                eventArgs.areInputsValid = False
+            
+            if float(Teeth_Num_Gear.value) <= 5 :
+                errMessageGear = 'Количество зубьев колеса должно быть больше 5!'
+                eventArgs.areInputsValid = False
+            
+            if float(Width_WG.value) <= 0 :
+                errMessageGear = 'Ширина колеса должна быть больше 0!'
+                eventArgs.areInputsValid = False
+
+            if float(hole_diameter.value) >= float((_Df_WG_tab.text).split(' ')[0]) :
+                errMessageGear = 'Диаметр отверстия больше диаметра колеса!'
+                eventArgs.areInputsValid = False
+
+
+
+            if eventArgs.areInputsValid == False:
+                if errMessageGeneral:
+                    _errMessageGeneral.isVisible = True
+                    _errMessageGeneral.formattedText = ('<h4><font color="red">%s</font></h4>' %errMessageGeneral)
+
+                if errMessageWorm:
+                    _errMessageWorm.isVisible = True
+                    _errMessageWorm.formattedText = ('<h4><font color="red">%s</font></h4>' %errMessageWorm)
+                
+                if errMessageGear:
+                    _errMessageGear.isVisible = True
+                    _errMessageGear.formattedText = ('<h4><font color="red">%s</font></h4>' %errMessageGear)
+            else:
+                 _errMessageWorm.isVisible = False
+                 _errMessageGeneral.isVisible = False
+                 _errMessageGear.isVisible = False                           
         except:
             if _ui:
                 _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
