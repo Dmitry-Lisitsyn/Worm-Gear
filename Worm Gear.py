@@ -1,7 +1,6 @@
 #Author-Dmitry Lisitsyn
 #Description-
 
-from html import entities
 import sys, subprocess
 import os
 import inspect
@@ -68,7 +67,7 @@ Velocity_ = adsk.core.ValueCommandInput.cast(None)
 Moment_WG = adsk.core.ValueCommandInput.cast(None)
 Power_WG = adsk.core.ValueCommandInput.cast(None)
 Velocity_WG = adsk.core.ValueCommandInput.cast(None)
-Fw_WG_tab = adsk.core.TextBoxCommandInput.cast(None)
+Bending_tab = adsk.core.TextBoxCommandInput.cast(None)
 Fd_WG_tab = adsk.core.TextBoxCommandInput.cast(None)
 Fa_WG_tab = adsk.core.TextBoxCommandInput.cast(None)
 Ft_WG_tab = adsk.core.TextBoxCommandInput.cast(None)
@@ -86,7 +85,7 @@ Puasson = adsk.core.ValueCommandInput.cast(None)
 Kmat = adsk.core.ValueCommandInput.cast(None)
 y_Luis = adsk.core.ValueCommandInput.cast(None)
 Sn = adsk.core.ValueCommandInput.cast(None)
-Fs_WG_tab = adsk.core.TextBoxCommandInput.cast(None)
+Contact_tab = adsk.core.TextBoxCommandInput.cast(None)
 radio_CountType = adsk.core.RadioButtonGroupCommandInput.cast(None)
 radio_WormSize = adsk.core.RadioButtonGroupCommandInput.cast(None)
 radioButtonS = adsk.core.RadioButtonGroupCommandInput.cast(None)
@@ -213,7 +212,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             cmd.isExecutedWhenPreEmpted = False
             inputs = cmd.commandInputs
             
-            global Kpd_Check,buttonRowInput, _errMessageGear, _errMessageGeneral, _errMessageWorm, hole_diameter, hole_Check, buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Fs_WG_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Fw_WG_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
+            global Kpd_Check,buttonRowInput, _errMessageGear, _errMessageGeneral, _errMessageWorm, hole_diameter, hole_Check, buttonimportParams, buttonSaveLoad, selectCreateWorm, selectCreateGear, radio_WormSize, Puasson, Kmat, Peredat_Changed, KolOborotov_worm, radio_CountType, Moment_WG, Velocity_WG, Power_WG, Power_, radioButtonS, Sn, Contact_tab, y_Luis, Kw, Elastic, KPD, Velocity_, Peredat_, Moment_, Bending_tab, Fd_WG_tab, Fa_WG_tab, Ft_WG_tab, Fa_worm_tab, Ft_worm_tab, Vk_tab, Fn_tab, Frad_tab, Eps_tab, Width_WG, Angle_prof_, Angle_teeth_, _xmin_tab, _Df_WG_tab, _D_WG_tab, _Da_WG_tab, _Dsr_tab, _Df_tab, _Alpha_tab, _naruz_Diam_tab, Koef_smesh_Gear, Teeth_Num_Gear, Num_of_vit_worm, Length_wormNarez, Av_diam_worm, Koef_Diam_worm, commandId, _Aw_tab, Module_, _Module_tab
            
             # ВКЛАДКА МОДЕЛЬ
             # TAB МОДЕЛЬ
@@ -479,6 +478,11 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             hole_diameter = groupChildInputs_WormGear.addValueInput('Model', '', '',
                                                 adsk.core.ValueInput.createByReal(0))
             
+            hole_diameter.tooltip = "Диаметр отверстия червячного колеса"
+            hole_diameter.tooltipDescription = "Параметр задает диаметр отверстия червячного колеса"
+            hole_diameter.toolClipFilename = 'resources/WormGear/holeGear.png'
+            
+            
             holeDiamAttrib = des.attributes.itemByName('Gear', 'holediam')
             if holeDiamAttrib:
                 hole_Check.value = True
@@ -517,15 +521,15 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             _Aw_tab.text = str((temp_dw1+temp_dw2)/2) + ' мм'
             table.addCommandInput(_Aw_tab, 0, 1, False, False)
             # 2
-            text = tab1ChildInputs.addStringValueInput('text0', '',
-                                                       'Коэффициент осевого перекрытия (ε)')
-            text.isReadOnly = True
-            table.addCommandInput(text, 1, 0, False, False)
+            # text = tab1ChildInputs.addStringValueInput('text0', '',
+            #                                            'Коэффициент осевого перекрытия (ε)')
+            # text.isReadOnly = True
+            # table.addCommandInput(text, 1, 0, False, False)
 
-            Eps_tab = tab1ChildInputs.addTextBoxCommandInput('textEps', 'textEps',
-                                                         '', 1, True)
-            Eps_tab.isReadOnly = True
-            table.addCommandInput(Eps_tab, 1, 1, False, False)
+            # Eps_tab = tab1ChildInputs.addTextBoxCommandInput('textEps', 'textEps',
+            #                                              '', 1, True)
+            # Eps_tab.isReadOnly = True
+            # table.addCommandInput(Eps_tab, 1, 1, False, False)
             # 3
             text = tab1ChildInputs.addStringValueInput('text0', 'm',
                                                        'Модуль (m)')
@@ -717,19 +721,14 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             groupCmdInput_MaterialWorm.isExpanded = False
             groupChildInputs_MaterialWorm = groupCmdInput_MaterialWorm.children
 
-            materialLibInputWorm = groupChildInputs_MaterialWorm.addDropDownCommandInput(commandId + '_materialLibWorm', 'Библиотека материалов', adsk.core.DropDownStyles.LabeledIconDropDownStyle)
-            listItemsWorm = materialLibInputWorm.listItems
-            materialLibNamesWorm = getMaterialLibNames()
-            for materialName in materialLibNamesWorm :
-                listItemsWorm.add(materialName, False, '')
-            listItemsWorm[0].isSelected = True
+            materialLibrary = "Fusion 360 Material Library"
+
             materialListInputWorm = groupChildInputs_MaterialWorm.addDropDownCommandInput(commandId + '_materialListWorm', 'Материал', adsk.core.DropDownStyles.TextListDropDownStyle)
-            materialsWorm = getMaterialsFromLib(materialLibNamesWorm[0], '')
+            materialsWorm = getMaterialsFromLib(materialLibrary)
             listItemsWorm = materialListInputWorm.listItems
             for materialName in materialsWorm :
                 listItemsWorm.add(materialName, False, '')
             listItemsWorm[0].isSelected = True
-            filter_materialWorm = groupChildInputs_MaterialWorm.addStringValueInput(commandId + '_filterWorm', 'Фильтр', '')
 
 
             groupCmdInput_MaterialWheel = tab2ChildInputs.addGroupCommandInput(commandId + '_groupMaterial',
@@ -737,20 +736,12 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             groupCmdInput_MaterialWheel.isExpanded = False
             groupChildInputs_MaterialWheel = groupCmdInput_MaterialWheel.children
 
-            materialLibInputWheel = groupChildInputs_MaterialWheel.addDropDownCommandInput(commandId + '_materialLibWheel', 'Библиотека материалов', adsk.core.DropDownStyles.LabeledIconDropDownStyle)
-            listItemsWheel = materialLibInputWheel.listItems
-            materialLibNamesWheel = getMaterialLibNames()
-            for materialName in materialLibNamesWheel :
-                listItemsWheel.add(materialName, False, '')
-            listItemsWheel[0].isSelected = True
             materialListInputWheel = groupChildInputs_MaterialWheel.addDropDownCommandInput(commandId + '_materialListWheel', 'Материал', adsk.core.DropDownStyles.TextListDropDownStyle)
-            materialsWheel = getMaterialsFromLib(materialLibNamesWheel[0], '')
+            materialsWheel = getMaterialsFromLib(materialLibrary)
             listItemsWheel = materialListInputWheel.listItems
             for materialName in materialsWheel :
                 listItemsWheel.add(materialName, False, '')
             listItemsWheel[0].isSelected = True
-            filter_materialGear = groupChildInputs_MaterialWheel.addStringValueInput(commandId + '_filterWheel', 'Фильтр', '')
-
 
             groupCmdInput_Material = tab2ChildInputs.addGroupCommandInput(commandId + '_groupMaterial',
                                                                           'Характеристики материалов')
@@ -839,6 +830,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             table.tablePresentationStyle = adsk.core.TablePresentationStyles.itemBorderTablePresentationStyle
             table.hasGrid = True
             # 1
+            Ft_worm_temp = (2000*float(Moment_.value))/(temp_dw1)
             text = tab2ChildInputs.addStringValueInput('text0', 'Ft',
                                                        'Окружная сила (Ft)')
             text.isReadOnly = True
@@ -847,7 +839,7 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             Ft_worm_tab = tab2ChildInputs.addTextBoxCommandInput('Count', 'TextFt',
                                                        '', 1, True)
             Ft_worm_tab.isReadOnly = True
-            Ft_worm_tab.text = ('%.4f' % ((2000*float(Moment_.value))/(temp_dw1))) + ' Н'
+            Ft_worm_tab.text = ('%.4f' % (Ft_worm_temp)) + ' Н'
             #((2000*float(Moment_.value))/((temp_dw2*0.01)*temp_Peredat))) + ' Н' 
             table.addCommandInput(Ft_worm_tab, 0, 1, False, False)
             # 2
@@ -912,28 +904,46 @@ class GearCommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             Kv = (1200+v2)/(1200)
             Fd_WG_tab.text = ('%.4f' % (tempS*Kv)) + ' Н'
             table.addCommandInput(Fd_WG_tab, 2, 1, False, False)
+
+            
             # 4
-            text = tab2ChildInputs.addStringValueInput('text0', 'Fw',
-                                                       'Поверхн. устал. пред. нагрузки (Fw)')
+            Koef = 0
+            if vk >=10:
+                Koef = 1.2
+            elif vk < 10 and vk > 5:
+                Koef = 1.1
+            elif vk <=5:
+                Koef = 1
+            zv2 = float(Teeth_Num_Gear.value)/math.pow(math.cos(tgy*math.pi/180),3)
+            if zv2 < 37:
+                Yf2 = 2.4-0.0214*zv2
+            elif zv2 >=37 and zv2 <=45:
+                Yf2 = 2.21-0.0162*zv2
+            elif zv2 > 45:
+                Yf2 = 1.72 - 0.0053*zv2
+            bending_stress_temp = (0.7*Ft_worm_temp*Koef)/(float(Width_WG.value)*float(temp_Module)* math.cos(tgy*math.pi/180)) * Yf2
+            text = tab2ChildInputs.addStringValueInput('text0', 'σн',
+                                                       'Напряжение изгиба')
             text.isReadOnly = True
             table.addCommandInput(text, 3, 0, False, False)
             
-            Fw_WG_tab = tab2ChildInputs.addTextBoxCommandInput('Count', 'TextFw',
+            Bending_tab = tab2ChildInputs.addTextBoxCommandInput('Count', 'Textσf',
                                                        '', 1 , True)
-            Fw_WG_tab.isReadOnly = True 
-            Fw_WG_tab.text = ('%.4f' % (temp_d2*0.001 * float(Width_WG.value)*0.01 * float(Kw.value)*100)) + ' Н'
-            table.addCommandInput(Fw_WG_tab, 3, 1, False, False)
+            Bending_tab.isReadOnly = True 
+            Bending_tab.text = ('%.4f' % (bending_stress_temp)) + ' Н'
+            table.addCommandInput(Bending_tab, 3, 1, False, False)
             # 5
-            text = tab2ChildInputs.addStringValueInput('text0', 'Fs',
-                                                       'Усталость изгиба пред. нагрузки (Fs)')
+            contact_stress_temp = 340 * math.sqrt((Koef*Ft_worm_temp)/(temp_d2*temp_dw1))
+            text = tab2ChildInputs.addStringValueInput('text0', 'σf',
+                                                       'Контактное напряжение')
             text.isReadOnly = True
             table.addCommandInput(text, 4, 0, False, False)
             
-            Fs_WG_tab = tab2ChildInputs.addTextBoxCommandInput('Count', 'TextFs',
+            Contact_tab = tab2ChildInputs.addTextBoxCommandInput('Count', 'Textσн',
                                                        '', 1, True)
-            Fs_WG_tab.isReadOnly = True
-            Fs_WG_tab.text = ('%.4f' % ((float(Sn.value)/10)*float(Width_WG.value)*0.01*(math.pi*temp_Module)*float(y_Luis.value))) + ' Н'
-            table.addCommandInput(Fs_WG_tab, 4, 1, False, False)
+            Contact_tab.isReadOnly = True
+            Contact_tab.text = ('%.4f' % (contact_stress_temp)) + ' Н'
+            table.addCommandInput(Contact_tab, 4, 1, False, False)
 
             temp_Ft_worm = float(str(Ft_worm_tab.text).split(' ')[0])
             Frad_tab.text = ('%.4f' % (temp_Ft_worm * (math.tan(temp_Angle_prof * math.pi/180)*math.cos(phiz * math.pi/180))/(math.sin((tgy+phiz)*math.pi/180)))) + ' Н'        
@@ -1386,31 +1396,21 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             try:
                 for inputI in inputs:
-                    if inputI.id == commandId + '_materialListWorm':
+                    if inputI.id == commandId + '_materialLstWorm':
                         materialListInput = inputI
-                    elif inputI.id == commandId + '_filterWorm':
-                        filterInput = inputI
-                    elif inputI.id == commandId + '_materialLibWorm':
-                        materialLibInput = inputI
                 cmdInput = args.input
-                if cmdInput.id == commandId + '_materialLibWorm' or cmdInput.id == commandId + '_filterWorm':
-                    materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
+                if cmdInput.id == commandId + '_materialLibWorm':
+                    materials = getMaterialsFromLib(materialLibInput.selectedItem.name)
                     replaceItems(materialListInput, materials)
                 
                 for inputI in inputs:
                     if inputI.id == commandId + '_materialListWheel':
                         materialListInput = inputI
-                    elif inputI.id == commandId + '_filterWheel':
-                        filterInput = inputI
-                    elif inputI.id == commandId + '_materialLibWheel':
-                        materialLibInput = inputI
                 cmdInput = args.input
-                if cmdInput.id == commandId + '_materialLibWheel' or cmdInput.id == commandId + '_filterWheel':
-                    materials = getMaterialsFromLib(materialLibInput.selectedItem.name, filterInput.value)
+                if cmdInput.id == commandId + '_materialLibWheel':
+                    materials = getMaterialsFromLib(materialLibInput.selectedItem.name)
                     replaceItems(materialListInput, materials)
-
-
-
+                    
 
                 if buttonSaveLoad.listItems[0].isSelected == True:
                     root = tk.Tk()
@@ -1571,21 +1571,41 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                     
                     Moment_WG.value = float(KPD.value)*float(Moment_.value)*Peredat
                     Ft_WG = (2000*float(Moment_WG.value))/(dw2)
-                    
+
+                Koef = 0
+                if vk >=10:
+                    Koef = 1.2
+                elif vk < 10 and vk > 5:
+                    Koef = 1.1
+                elif vk <=5:
+                    Koef = 1
+                contact_stress = 340 * math.sqrt((Koef*Ft_WG)/(d2*dw1))
+               
+                zv2 = float(Teeth_Num_Gear.value)/math.pow(math.cos(tgy*math.pi/180),3)
+                if zv2 < 37:
+                    Yf2 = 2.4-0.0214*zv2
+                elif zv2 >=37 and zv2 <=45:
+                    Yf2 = 2.21-0.0162*zv2
+                elif zv2 > 45:
+                    Yf2 = 1.72 - 0.0053*zv2
+                bending_stress = (0.7*Ft_WG*Koef)/(float(Width_WG.value)*float(Module)* math.cos(tgy*math.pi/180)) * Yf2
+
+
+
                 if changedInput.id == 'Model':
                     #Table Model 
                     _Aw_tab.text = ('%.4f' %((dw1+dw2)/2)) + ' мм'
-                    Eps_tab.text = ('%.4f' % Epsilon)
+                    # Eps_tab.text = ('%.4f' % Epsilon)
                     _Module_tab.text = Module + ' мм'
                     _Alpha_tab.text = ('%.4f' % (math.atan(tan_on_cos) *180/math.pi)) + ' deg'
 
                     _naruz_Diam_tab.text = ('%.4f' %(da1)) + ' мм'    
                     _Dsr_tab.text = ('%.4f' %(Av_diam_worm.value)) + ' мм'
-                    _Df_tab.text = ('%.4f' %(d1-2*float(Module)*(1+0.3))) + ' мм'
+                    _Df_tab.text = ('%.4f' %(d1-2.4*float(Module))) + ' мм'
 
                     _Da_WG_tab.text = str(d2+2*float(Module)*(1 + float(Koef_smesh_Gear.value))) + ' мм'
                     _D_WG_tab.text = str(int(Teeth_Num_Gear.value)*float(Module)) + ' мм'
-                    _Df_WG_tab.text = str(d2 - 2 * float(Module)*(1 + 0.3 - float(Koef_smesh_Gear.value))) + ' мм' 
+                    _Df_WG_tab.text = str(d2 - 2 * float(Module)*(1.2 - float(Koef_smesh_Gear.value))) + ' мм' 
                     # _xmin_tab.text = ('%.4f' % (Ha0-((Zv2/2)*(1+(0.2723/1))*(math.sin(Angle_prof * math.pi/180))**2)))
 
                     #Table Count
@@ -1600,8 +1620,8 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 
                     Ft_WG_val = float((str(Fa_worm_tab.text).split(' '))[0])
                     Fd_WG_tab.text = ('%.4f' % (Ft_WG_val*Kv)) + ' Н'
-                    Fw_WG_tab.text = ('%.4f' % (d2*0.001 * float(Width_WG.value)*0.01 * float(Kw.value)*100)) + ' Н'
-                    Fs_WG_tab.text = ('%.4f' % ((float(Sn.value)/10)*float(Width_WG.value)*0.01*(math.pi*float(Module))*float(y_Luis.value))) + ' Н'
+                    Bending_tab.text = ('%.4f' % (bending_stress)) + ' МПа'
+                    Contact_tab.text = ('%.4f' % (contact_stress)) + ' МПа'
                     
                 if buttonimportParams.listItems[0].isSelected == True:
                     generatePdfTable()
@@ -1611,7 +1631,8 @@ class GearCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                     generateWordTable()
                     buttonimportParams.listItems[1].isSelected = False
             except:
-                pass
+                if _ui:
+                    _ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
                 #Epsilons
                 # pb = math.pi * math.cos(Angle_prof * math.pi/180)
                 # pn = math.pi*(float(Module)/math.cos( float(Angle_teeth_.value)))
@@ -1667,7 +1688,6 @@ def generateWordTable():
 
 
 def generatePdfTable():
-
     data = generateData(isForTable=True)
     
     pdf = FPDF()
@@ -1738,7 +1758,7 @@ def generateData(isForTable):
                 ('Угол профиля, мм', str(Angle_prof_.selectedItem.name)),
                 ('Угол наклона зуба, °', str(Angle_teeth_.value)),
                 ('Межосевое расстояние, мм', str(_Aw_tab.text)),
-                ('Коэффициент осевого перекрытия', str(Eps_tab.text)),
+                # ('Коэффициент осевого перекрытия', str(Eps_tab.text)),
                 ('Угол профиля, °',  str(_Alpha_tab.text)),
                 ('Количество витков', str(Num_of_vit_worm.value)),
                 ('Количество оборотов витков', str(KolOborotov_worm.value)),
@@ -1773,8 +1793,8 @@ def generateData(isForTable):
                 ("Окружная сила колеса (Ft)", str(Fa_WG_tab.text)),
                 ("Осевая сила колеса (Fa)", str(Ft_WG_tab.text)),
                 ("Динамическая нагрузка (Fd)", str(Fd_WG_tab.text)),
-                ("Поверхн. устал. пред. нагрузки (Fw)", str(Fw_WG_tab.text)),
-                ("Усталость изгиба пред. нагрузки (Fs)", str(Fs_WG_tab.text)),
+                ("Напряжение изгиба (σf)", str(Bending_tab.text)),
+                ("Контактное напряжение (σн)", str(Contact_tab.text)),
                 )
     return params
 
@@ -1845,7 +1865,7 @@ def getMaterialLibNames():
             libNames.append(materialLib.name)
     return libNames
 
-def getMaterialsFromLib(libName, filterExp):
+def getMaterialsFromLib(libName):
     global materialsMap
     materialList = None
     if libName in materialsMap:
@@ -1859,14 +1879,7 @@ def getMaterialsFromLib(libName, filterExp):
         materialsMap[libName] = materialNames
         materialList = materialNames
 
-    if filterExp and len(filterExp) > 0:
-        filteredList = []
-        for materialName in materialList:
-            if materialName.lower().find(filterExp.lower()) >= 0:
-                filteredList.append(materialName)
-        return filteredList
-    else:
-        return materialList
+    return materialList
 
 def replaceItems(cmdInput, newItems):
     cmdInput.listItems.clear()
